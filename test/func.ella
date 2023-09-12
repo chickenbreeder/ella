@@ -1,3 +1,7 @@
+let z = 42;
+
 fn foo() {
-    return 42;
+    return z;
 }
+
+let a = foo() + 8;

@@ -61,6 +61,20 @@ impl<'src> Parser<'src> {
                         statements.push(*stmt);
                     }
 
+                    match statements.last() {
+                        None => {
+                            return Err(ErrorKind::ParseError(
+                                "Function must return a value".into(),
+                            ))
+                        }
+                        Some(Statement::Return(_)) => (),
+                        other => {
+                            return Err(ErrorKind::ParseError(format!(
+                                "Expected return statement, found {other:?}"
+                            )))
+                        }
+                    }
+
                     Ok(Some(Box::new(Statement::FnDecl(FnDecl {
                         id,
                         arity: 0,
@@ -144,7 +158,15 @@ impl<'src> Parser<'src> {
             None => Ok(None),
             Some(token) => match token {
                 Token::Number(v) => Ok(Some(Box::new(Expression::Number(v)))),
-                Token::Id(id) => Ok(Some(Box::new(Expression::VarRef(id)))),
+                Token::Id(id) => {
+                    if let Some(Token::LParen) = self.lexer.peek() {
+                        self.eat();
+                        self.expect(Token::RParen)?;
+                        return Ok(Some(Box::new(Expression::FnCall { id, params: vec![] })));
+                    }
+
+                    Ok(Some(Box::new(Expression::VarRef(id))))
+                }
                 Token::LParen => self.parse_grouping_expr(),
                 Token::Op(Operator::Minus) => self.parse_unary_expr(),
                 other => Err(ErrorKind::ParseError(format!(

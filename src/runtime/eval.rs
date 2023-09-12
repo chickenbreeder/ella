@@ -30,7 +30,14 @@ impl<'src> Interpreter<'src> {
                 Statement::VarDecl { id, value } => {
                     let value = self.eval_expr(&value)?;
                     println!("DECL: {id} = {value}");
-                    self.global_env.insert(id, value);
+
+                    if self.global_env.contains_key(id) {
+                        return Err(ErrorKind::RuntimeError(format!(
+                            "Variable `{id}` has already been declared"
+                        )));
+                    } else {
+                        self.global_env.insert(id, value);
+                    }
                 }
                 Statement::Assignment { id, value } => {
                     let value = self.eval_expr(&value)?;
@@ -80,6 +87,15 @@ impl<'src> Interpreter<'src> {
                 Err(ErrorKind::RuntimeError(format!(
                     "Undefined reference `{id}`"
                 )))
+            }
+            Expression::FnCall { id, params: _ } => {
+                let decl = self.functions.get(id).unwrap();
+                let statements = &decl.body[..decl.body.len() - 1];
+
+                match decl.body.last() {
+                    Some(Statement::Return(expr)) => Ok(self.eval_expr(expr)?),
+                    _ => unreachable!("Last statement in function body was not a return statement. This should never happen")
+                }
             }
             _ => todo!(),
         }
