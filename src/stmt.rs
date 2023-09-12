@@ -1,6 +1,13 @@
 use crate::expr::Expression;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub(crate) struct FnDecl<'src> {
+    pub id: &'src str,
+    pub arity: u8,
+    pub body: Vec<Statement<'src>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum Statement<'src> {
     VarDecl {
         id: &'src str,
@@ -11,4 +18,5 @@ pub(crate) enum Statement<'src> {
         value: Box<Expression<'src>>,
     },
     Return(Box<Expression<'src>>),
+    FnDecl(FnDecl<'src>),
 }

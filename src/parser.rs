@@ -2,7 +2,7 @@ use crate::{
     error::{ErrorKind, PResult},
     expr::Expression,
     lexer::Lexer,
-    stmt::Statement,
+    stmt::{FnDecl, Statement},
     token::{Assoc, Keyword, Operator, Token},
 };
 use std::iter::Peekable;
@@ -35,6 +35,37 @@ impl<'src> Parser<'src> {
                     self.expect(Token::Semicolon)?;
 
                     Ok(Some(Box::new(Statement::Return(expr))))
+                }
+                Keyword::Fn => {
+                    let id = self.parse_id()?;
+                    let mut statements = vec![];
+
+                    self.expect(Token::LParen)?;
+                    self.expect(Token::RParen)?;
+                    self.expect(Token::LCurly)?;
+
+                    loop {
+                        if let Some(Token::RCurly) = self.lexer.peek() {
+                            self.eat();
+                            break;
+                        }
+
+                        let stmt = match self.parse_stmt()? {
+                            Some(stmt) => stmt,
+                            None => {
+                                return Err(ErrorKind::ParseError(
+                                    "Expected statement or `}`, found EOF".into(),
+                                ))
+                            }
+                        };
+                        statements.push(*stmt);
+                    }
+
+                    Ok(Some(Box::new(Statement::FnDecl(FnDecl {
+                        id,
+                        arity: 0,
+                        body: statements,
+                    }))))
                 }
                 _ => todo!(),
             },
@@ -137,6 +168,10 @@ impl<'src> Parser<'src> {
                 )))
             }
         }
+    }
+
+    fn eat(&mut self) {
+        let _ = self.lexer.next();
     }
 
     fn expect_expr(&mut self) -> PResult<Box<Expression<'src>>> {

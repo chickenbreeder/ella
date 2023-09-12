@@ -1,14 +1,14 @@
 mod error;
-mod eval;
 mod expr;
 mod lexer;
 mod parser;
+mod runtime;
 mod stmt;
 mod token;
 
 use std::{env, path::Path, process};
 
-use eval::Interpreter;
+use runtime::eval::Interpreter;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
