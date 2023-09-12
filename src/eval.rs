@@ -4,6 +4,7 @@ use crate::{
     error::{ErrorKind, PResult},
     expr::Expression,
     parser::Parser,
+    stmt::Statement,
     token::Operator,
 };
 
@@ -18,12 +19,28 @@ impl<'src> Interpreter<'src> {
         }
     }
 
-    pub fn eval(&self, src: &str) -> PResult<Option<i64>> {
+    pub fn eval(&mut self, src: &'src str) -> PResult<()> {
         let mut parser = Parser::new(src);
 
+        while let Some(stmt) = parser.parse_stmt()? {
+            match *stmt {
+                Statement::VarDecl { id, value } => {
+                    let value = self.eval_expr(&value)?;
+                    println!("DECL: {id} = {value}");
+                    self.env.insert(id, value);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn eval_expr_str(&self, expr: &'static str) -> PResult<Option<i64>> {
+        let mut parser = Parser::new(expr);
+
         match parser.parse_expr()? {
-            None => Ok(None),
             Some(expr) => Ok(Some(self.eval_expr(&expr)?)),
+            None => Ok(None),
         }
     }
 
@@ -55,26 +72,35 @@ mod test {
 
     #[test]
     fn eval_1() {
-        let value = Interpreter::new().eval("4 + 10 * -1").unwrap().unwrap();
+        let value = Interpreter::new()
+            .eval_expr_str("4 + 10 * -1")
+            .unwrap()
+            .unwrap();
         assert_eq!(value, -6);
     }
 
     #[test]
     fn eval_2() {
-        let value = Interpreter::new().eval("(4 + 10) * -1").unwrap().unwrap();
+        let value = Interpreter::new()
+            .eval_expr_str("(4 + 10) * -1")
+            .unwrap()
+            .unwrap();
         assert_eq!(value, -14);
     }
 
     #[test]
     fn eval_3() {
-        let value = Interpreter::new().eval("-48 + 9").unwrap().unwrap();
+        let value = Interpreter::new()
+            .eval_expr_str("-48 + 9")
+            .unwrap()
+            .unwrap();
         assert_eq!(value, -39);
     }
 
     #[test]
     fn eval_4() {
         let value = Interpreter::new()
-            .eval("-8 + 5 * (13 - 1) * -1")
+            .eval_expr_str("-8 + 5 * (13 - 1) * -1")
             .unwrap()
             .unwrap();
         assert_eq!(value, -68);
@@ -83,7 +109,7 @@ mod test {
     #[test]
     fn eval_5() {
         let value = Interpreter::new()
-            .eval("(-8 + 5) * (13 - 1) * -1")
+            .eval_expr_str("(-8 + 5) * (13 - 1) * -1")
             .unwrap()
             .unwrap();
         assert_eq!(value, 36);

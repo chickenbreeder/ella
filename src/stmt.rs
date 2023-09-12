@@ -1,6 +1,6 @@
 use crate::expr::Expression;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum Statement<'src> {
     VarDecl {
         id: &'src str,

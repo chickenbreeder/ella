@@ -2,7 +2,8 @@ use crate::{
     error::{ErrorKind, PResult},
     expr::Expression,
     lexer::Lexer,
-    token::{Assoc, Operator, Token},
+    stmt::Statement,
+    token::{Assoc, Keyword, Operator, Token},
 };
 use std::iter::Peekable;
 
@@ -14,6 +15,40 @@ impl<'src> Parser<'src> {
     pub fn new(src: &'src str) -> Self {
         Self {
             lexer: Lexer::new(src).peekable(),
+        }
+    }
+
+    pub fn parse_stmt(&mut self) -> PResult<Option<Box<Statement<'src>>>> {
+        match self.lexer.next() {
+            None => Ok(None),
+            Some(Token::Kw(kw)) => match kw {
+                Keyword::Let => {
+                    let id = self.parse_id()?;
+                    self.expect(Token::Eq)?;
+
+                    if let Some(expr) = self.parse_expr()? {
+                        self.expect(Token::Semicolon)?;
+                        return Ok(Some(Box::new(Statement::VarDecl { id, value: expr })));
+                    }
+                    Err(ErrorKind::ParseError(
+                        "Expected expression, found EOF".into(),
+                    ))
+                }
+                _ => todo!(),
+            },
+            other => Err(ErrorKind::ParseError(format!(
+                "Expected statement, found {other:?}"
+            ))),
+        }
+    }
+
+    fn parse_id(&mut self) -> PResult<&'src str> {
+        match self.lexer.next() {
+            None => Err(ErrorKind::ParseError("Expected id, found EOF".into())),
+            Some(Token::Id(id)) => Ok(id),
+            other => Err(ErrorKind::ParseError(format!(
+                "Expected id, found {other:?}"
+            ))),
         }
     }
 
@@ -117,7 +152,7 @@ impl<'src> Parser<'src> {
 #[cfg(test)]
 mod test {
     use super::Parser;
-    use crate::{expr::Expression, token::Operator};
+    use crate::{expr::Expression, stmt::Statement, token::Operator};
 
     #[test]
     fn parse_binary_expr() {
@@ -136,7 +171,7 @@ mod test {
             }),
         });
 
-        assert_eq!(expected, expr);
+        assert_eq!(expr, expected);
     }
 
     #[test]
@@ -156,6 +191,18 @@ mod test {
             rhs: Box::new(Number(7)),
         });
 
-        assert_eq!(expected, expr);
+        assert_eq!(expr, expected);
+    }
+
+    #[test]
+    fn parse_let_stmt() {
+        let mut parser = Parser::new("let a = 42;");
+        let expr = parser.parse_stmt().unwrap().unwrap();
+        let expected = Box::new(Statement::VarDecl {
+            id: "a",
+            value: Box::new(Expression::Number(42)),
+        });
+
+        assert_eq!(expr, expected);
     }
 }

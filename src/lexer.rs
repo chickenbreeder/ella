@@ -1,6 +1,6 @@
 use std::{iter::Peekable, str::CharIndices};
 
-use crate::token::{Operator, Token};
+use crate::token::{Keyword, Operator, Token};
 
 pub(crate) struct Lexer<'src> {
     src: &'src str,
@@ -18,8 +18,13 @@ impl<'src> Iterator for Lexer<'src> {
             Some((_, '*')) => Some(Token::Op(Operator::Mul)),
             Some((_, '(')) => Some(Token::LParen),
             Some((_, ')')) => Some(Token::RParen),
+            Some((_, '{')) => Some(Token::LCurly),
+            Some((_, '}')) => Some(Token::RCurly),
             Some((_, '[')) => Some(Token::LBracket),
             Some((_, ']')) => Some(Token::RBracket),
+            Some((_, '=')) => Some(Token::Eq),
+            Some((_, ',')) => Some(Token::Comma),
+            Some((_, ';')) => Some(Token::Semicolon),
             Some((off, c)) => {
                 if c.is_whitespace() {
                     return self.next();
@@ -73,7 +78,14 @@ impl<'src> Lexer<'src> {
 
     fn read_id(&mut self, from_off: usize) -> Token<'src> {
         let s = self.slice_until(from_off, |c| !Self::is_id_part(c));
-        Token::Id(s)
+        match s {
+            "let" => Token::Kw(Keyword::Let),
+            "fn" => Token::Kw(Keyword::Fn),
+            "if" => Token::Kw(Keyword::If),
+            "else" => Token::Kw(Keyword::Else),
+            "return" => Token::Kw(Keyword::Return),
+            _ => Token::Id(s),
+        }
     }
 
     fn is_id_start(c: char) -> bool {

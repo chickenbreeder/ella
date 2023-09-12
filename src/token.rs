@@ -28,6 +28,10 @@ impl Operator {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Keyword {
     Let,
+    Fn,
+    If,
+    Else,
+    Return,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,6 +44,13 @@ pub(crate) enum Token<'src> {
 
     LParen,
     RParen,
+    LCurly,
+    RCurly,
     LBracket,
     RBracket,
+
+    Eq,
+
+    Comma,
+    Semicolon,
 }
