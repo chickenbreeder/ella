@@ -1,4 +1,4 @@
-use crate::token::OperatorKind;
+use crate::token::Operator;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum Expression<'src> {
@@ -7,7 +7,7 @@ pub(crate) enum Expression<'src> {
     Unary(Box<Expression<'src>>),
     Binary {
         lhs: Box<Expression<'src>>,
-        op: OperatorKind,
+        op: Operator,
         rhs: Box<Expression<'src>>,
     },
     VarRef(&'src str),

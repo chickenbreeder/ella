@@ -1,6 +1,6 @@
 use std::{iter::Peekable, str::CharIndices};
 
-use crate::token::{OperatorKind, Token};
+use crate::token::{Operator, Token};
 
 pub(crate) struct Lexer<'src> {
     src: &'src str,
@@ -13,9 +13,9 @@ impl<'src> Iterator for Lexer<'src> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.chars.next() {
             None => None,
-            Some((_, '+')) => Some(Token::Op(OperatorKind::Plus)),
-            Some((_, '-')) => Some(Token::Op(OperatorKind::Minus)),
-            Some((_, '*')) => Some(Token::Op(OperatorKind::Mul)),
+            Some((_, '+')) => Some(Token::Op(Operator::Plus)),
+            Some((_, '-')) => Some(Token::Op(Operator::Minus)),
+            Some((_, '*')) => Some(Token::Op(Operator::Mul)),
             Some((_, '(')) => Some(Token::LParen),
             Some((_, ')')) => Some(Token::RParen),
             Some((_, '[')) => Some(Token::LBracket),

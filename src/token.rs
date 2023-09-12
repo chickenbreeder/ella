@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum OperatorKind {
+pub(crate) enum Operator {
     Plus,
     Minus,
     Mul,
@@ -10,7 +10,7 @@ pub(crate) enum Assoc {
     Left,
 }
 
-impl OperatorKind {
+impl Operator {
     pub fn get_precedence(self) -> u8 {
         match self {
             Self::Plus | Self::Minus => 10,
@@ -26,10 +26,16 @@ impl OperatorKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Keyword {
+    Let,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Token<'src> {
     Invalid(char),
     Number(i64),
-    Op(OperatorKind),
+    Op(Operator),
+    Kw(Keyword),
     Id(&'src str),
 
     LParen,

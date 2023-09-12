@@ -2,7 +2,7 @@ use crate::{
     error::{ErrorKind, PResult},
     expr::Expression,
     lexer::Lexer,
-    token::{Assoc, OperatorKind, Token},
+    token::{Assoc, Operator, Token},
 };
 use std::iter::Peekable;
 
@@ -72,7 +72,7 @@ impl<'src> Parser<'src> {
                 Token::Number(v) => Ok(Some(Box::new(Expression::Number(v)))),
                 Token::Id(id) => Ok(Some(Box::new(Expression::VarRef(id)))),
                 Token::LParen => self.parse_grouping_expr(),
-                Token::Op(OperatorKind::Minus) => self.parse_unary_expr(),
+                Token::Op(Operator::Minus) => self.parse_unary_expr(),
                 other => Err(ErrorKind::ParseError(format!(
                     "Expected expression, found {other:?}"
                 ))),
@@ -117,12 +117,12 @@ impl<'src> Parser<'src> {
 #[cfg(test)]
 mod test {
     use super::Parser;
-    use crate::{expr::Expression, token::OperatorKind};
+    use crate::{expr::Expression, token::Operator};
 
     #[test]
     fn parse_binary_expr() {
         use Expression::*;
-        use OperatorKind::*;
+        use Operator::*;
 
         let mut parser = Parser::new("-5 + 4 * 7");
         let expr = parser.parse_expr().unwrap().unwrap();
@@ -142,7 +142,7 @@ mod test {
     #[test]
     fn parse_binary_expr_2() {
         use Expression::*;
-        use OperatorKind::*;
+        use Operator::*;
 
         let mut parser = Parser::new("(-5 + 4) * 7");
         let expr = parser.parse_expr().unwrap().unwrap();

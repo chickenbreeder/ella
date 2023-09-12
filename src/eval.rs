@@ -4,7 +4,7 @@ use crate::{
     error::{ErrorKind, PResult},
     expr::Expression,
     parser::Parser,
-    token::OperatorKind,
+    token::Operator,
 };
 
 pub(crate) struct Interpreter<'src> {
@@ -33,9 +33,9 @@ impl<'src> Interpreter<'src> {
             Expression::Grouping(expr) => self.eval_expr(expr),
             Expression::Unary(expr) => Ok(-self.eval_expr(expr)?),
             Expression::Binary { lhs, op, rhs } => match op {
-                OperatorKind::Plus => Ok(self.eval_expr(lhs)? + self.eval_expr(rhs)?),
-                OperatorKind::Minus => Ok(self.eval_expr(lhs)? - self.eval_expr(rhs)?),
-                OperatorKind::Mul => Ok(self.eval_expr(lhs)? * self.eval_expr(rhs)?),
+                Operator::Plus => Ok(self.eval_expr(lhs)? + self.eval_expr(rhs)?),
+                Operator::Minus => Ok(self.eval_expr(lhs)? - self.eval_expr(rhs)?),
+                Operator::Mul => Ok(self.eval_expr(lhs)? * self.eval_expr(rhs)?),
             },
             Expression::VarRef(id) => {
                 if let Some(value) = self.env.get(id) {
