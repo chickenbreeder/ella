@@ -6,4 +6,9 @@ pub(crate) enum Statement<'src> {
         id: &'src str,
         value: Box<Expression<'src>>,
     },
+    Assignment {
+        id: &'src str,
+        value: Box<Expression<'src>>,
+    },
+    Return(Box<Expression<'src>>),
 }

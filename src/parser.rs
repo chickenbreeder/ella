@@ -25,17 +25,25 @@ impl<'src> Parser<'src> {
                 Keyword::Let => {
                     let id = self.parse_id()?;
                     self.expect(Token::Eq)?;
+                    let expr = self.expect_expr()?;
+                    self.expect(Token::Semicolon)?;
 
-                    if let Some(expr) = self.parse_expr()? {
-                        self.expect(Token::Semicolon)?;
-                        return Ok(Some(Box::new(Statement::VarDecl { id, value: expr })));
-                    }
-                    Err(ErrorKind::ParseError(
-                        "Expected expression, found EOF".into(),
-                    ))
+                    Ok(Some(Box::new(Statement::VarDecl { id, value: expr })))
+                }
+                Keyword::Return => {
+                    let expr = self.expect_expr()?;
+                    self.expect(Token::Semicolon)?;
+
+                    Ok(Some(Box::new(Statement::Return(expr))))
                 }
                 _ => todo!(),
             },
+            Some(Token::Id(id)) => {
+                self.expect(Token::Eq)?;
+                let expr = self.expect_expr()?;
+                self.expect(Token::Semicolon)?;
+                Ok(Some(Box::new(Statement::Assignment { id, value: expr })))
+            }
             other => Err(ErrorKind::ParseError(format!(
                 "Expected statement, found {other:?}"
             ))),
@@ -88,7 +96,7 @@ impl<'src> Parser<'src> {
             let rhs = match self.parse_expr_with_precedence(new_min_prec)? {
                 None => {
                     return Err(ErrorKind::ParseError(
-                        "Expected expression, found EOF".to_string(),
+                        "Expected expression, found EOF".into(),
                     ))
                 }
                 Some(expr) => expr,
@@ -128,6 +136,15 @@ impl<'src> Parser<'src> {
                     "Expected {expected:?}, found {token:?}"
                 )))
             }
+        }
+    }
+
+    fn expect_expr(&mut self) -> PResult<Box<Expression<'src>>> {
+        match self.parse_expr()? {
+            Some(expr) => Ok(expr),
+            None => Err(ErrorKind::ParseError(
+                "Expected expression, found EOF".into(),
+            )),
         }
     }
 

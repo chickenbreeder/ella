@@ -29,6 +29,18 @@ impl<'src> Interpreter<'src> {
                     println!("DECL: {id} = {value}");
                     self.env.insert(id, value);
                 }
+                Statement::Assignment { id, value } => {
+                    let value = self.eval_expr(&value)?;
+
+                    if let Some(v) = self.env.get_mut(id) {
+                        *v = value;
+                    } else {
+                        return Err(ErrorKind::RuntimeError(format!(
+                            "Undefined reference `{id}`"
+                        )));
+                    }
+                }
+                _ => (),
             }
         }
 
