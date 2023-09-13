@@ -2,8 +2,19 @@ fn bar() {
     return -7;
 }
 
+fn inc(n) {
+    let y = n;
+    return y + 1;
+}
+
+fn add(a, b) {
+    return a + b;
+}
+
 fn main() {
     foo();
+    let b = inc(40);
+    let c = add(8, 5);
     let a = bar() + foo();
     return 1;
 }

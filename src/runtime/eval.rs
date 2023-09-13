@@ -124,7 +124,7 @@ impl<'src> Interpreter<'src> {
         }
     }
 
-    fn eval_fn_call(&self, id: &'src str, _params: &[Expression<'src>]) -> PResult<i64> {
+    fn eval_fn_call(&self, id: &'src str, args: &[Expression<'src>]) -> PResult<i64> {
         let decl = match self.functions.get(id) {
             Some(decl) => decl,
             None => {
@@ -133,8 +133,24 @@ impl<'src> Interpreter<'src> {
                 )))
             }
         };
+
+        if decl.arity != args.len() as u8 {
+            return Err(ErrorKind::RuntimeError(format!(
+                "Argument count missmatch. Expected {}, got {}",
+                decl.arity,
+                args.len()
+            )));
+        }
+
         let statements = &decl.body[..decl.body.len() - 1];
         let mut env = Environment::new();
+
+        for i in 0..decl.arity as usize {
+            let param = decl.params[i];
+            let argument = self.eval_expr_in_env(&args[i], &mut env)?;
+
+            env.insert(param, argument);
+        }
 
         for stmt in statements {
             self.eval_stmt_in_env(stmt, &mut env)?;

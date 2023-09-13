@@ -4,6 +4,7 @@ use crate::expr::Expression;
 pub(crate) struct FnDecl<'src> {
     pub id: &'src str,
     pub arity: u8,
+    pub params: Vec<&'src str>,
     pub body: Vec<Statement<'src>>,
 }
 

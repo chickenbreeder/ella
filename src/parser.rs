@@ -41,7 +41,7 @@ impl<'src> Parser<'src> {
                     let mut statements = vec![];
 
                     self.expect(Token::LParen)?;
-                    self.expect(Token::RParen)?;
+                    let params = self.parse_fn_params()?;
                     self.expect(Token::LCurly)?;
 
                     loop {
@@ -77,7 +77,8 @@ impl<'src> Parser<'src> {
 
                     Ok(Some(Box::new(Statement::FnDecl(FnDecl {
                         id,
-                        arity: 0,
+                        arity: params.len() as u8,
+                        params,
                         body: statements,
                     }))))
                 }
@@ -182,9 +183,75 @@ impl<'src> Parser<'src> {
         }
     }
 
+    // TODO: Refactor this and parse_call_expr to get rid of duplicated code
+    fn parse_fn_params(&mut self) -> PResult<Vec<&'src str>> {
+        let mut params = vec![];
+
+        match self.lexer.peek() {
+            Some(Token::RParen) => (),
+            _ => {
+                let param = self.parse_id()?;
+                params.push(param);
+
+                loop {
+                    match self.lexer.peek() {
+                        None => {
+                            return Err(ErrorKind::ParseError(
+                                "Expected `,` or `)`, found EOF".into(),
+                            ))
+                        }
+                        Some(Token::RParen) => break,
+                        Some(Token::Comma) => {
+                            self.eat();
+                            let param = self.parse_id()?;
+                            params.push(param);
+                        }
+                        other => {
+                            return Err(ErrorKind::ParseError(format!(
+                                "Expected `,` or `)`, found {other:?}"
+                            )))
+                        }
+                    }
+                }
+            }
+        }
+        self.eat();
+        Ok(params)
+    }
+
     fn parse_call_expr(&mut self, id: &'src str) -> PResult<Box<Expression<'src>>> {
-        self.expect(Token::RParen)?;
-        return Ok(Box::new(Expression::FnCall { id, params: vec![] }));
+        let mut args = vec![];
+
+        match self.lexer.peek() {
+            Some(Token::RParen) => (),
+            _ => {
+                let expr = self.expect_expr()?;
+                args.push(*expr);
+
+                loop {
+                    match self.lexer.peek() {
+                        None => {
+                            return Err(ErrorKind::ParseError(
+                                "Expected `,` or `)`, found EOF".into(),
+                            ))
+                        }
+                        Some(Token::RParen) => break,
+                        Some(Token::Comma) => {
+                            self.eat();
+                            let expr = self.expect_expr()?;
+                            args.push(*expr);
+                        }
+                        other => {
+                            return Err(ErrorKind::ParseError(format!(
+                                "Expected `,` or `)`, found {other:?}"
+                            )))
+                        }
+                    }
+                }
+            }
+        }
+        self.eat();
+        Ok(Box::new(Expression::FnCall { id, params: args }))
     }
 
     fn expect(&mut self, expected: Token) -> PResult<()> {
