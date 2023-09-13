@@ -1,7 +1,13 @@
-let z = 42;
-
-fn foo() {
-    return z;
+fn bar() {
+    return -6;
 }
 
-let a = foo() + 8;
+fn main() {
+    let a = foo() + 8;
+    return 1;
+}
+
+fn foo() {
+    let z = 40 + bar();
+    return z;
+}
