@@ -15,4 +15,5 @@ pub(crate) enum Expression<'src> {
         id: &'src str,
         params: Vec<Expression<'src>>,
     },
+    Boolean(bool),
 }

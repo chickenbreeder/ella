@@ -1,9 +1,9 @@
-use crate::expr::Expression;
+use crate::{expr::Expression, runtime::value::Value};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum FnType<'src> {
     NativeFn {
-        func: fn(i64) -> i64,
+        func: fn(Value) -> Value,
     },
     NormalFn {
         params: Vec<&'src str>,

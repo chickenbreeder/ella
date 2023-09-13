@@ -19,8 +19,6 @@ fn main() {
     let z =  a;
 
     print(z);
-    print(a + z * 2);
-    return 1;
 }
 
 fn foo() {

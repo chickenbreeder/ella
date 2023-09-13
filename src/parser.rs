@@ -61,20 +61,6 @@ impl<'src> Parser<'src> {
                         statements.push(*stmt);
                     }
 
-                    match statements.last() {
-                        None => {
-                            return Err(ErrorKind::ParseError(
-                                "Function must return a value".into(),
-                            ))
-                        }
-                        Some(Statement::Return(_)) => (),
-                        other => {
-                            return Err(ErrorKind::ParseError(format!(
-                                "Expected return statement, found {other:?}"
-                            )))
-                        }
-                    }
-
                     Ok(Some(Box::new(Statement::FnDecl(FnDecl {
                         id,
                         arity: params.len() as u8,
@@ -178,6 +164,8 @@ impl<'src> Parser<'src> {
                 }
                 Token::LParen => self.parse_grouping_expr(),
                 Token::Op(Operator::Minus) => self.parse_unary_expr(),
+                Token::Kw(Keyword::True) => Ok(Some(Box::new(Expression::Boolean(true)))),
+                Token::Kw(Keyword::False) => Ok(Some(Box::new(Expression::Boolean(false)))),
                 other => Err(ErrorKind::ParseError(format!(
                     "Expected expression, found {other:?}"
                 ))),

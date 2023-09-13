@@ -1,0 +1,14 @@
+fn bar() {
+    foo();
+    return 7;
+}
+
+fn foo() {
+}
+
+fn main() {
+    let a = foo();
+
+    print(a);
+    print(bar());
+}

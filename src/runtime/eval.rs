@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::env::Environment;
+use super::{env::Environment, value::Value};
 use crate::{
     error::{ErrorKind, PResult},
     expr::Expression,
@@ -13,14 +13,9 @@ pub(crate) struct Interpreter<'src> {
     functions: HashMap<&'src str, FnDecl<'src>>,
 }
 
-fn native_print(arg: i64) -> i64 {
-    println!("{}", arg);
-    1
-}
-
-fn native_assert(arg0: i64, arg1: i64) -> i64 {
-    assert_eq!(arg0, arg1);
-    1
+fn native_print(arg: Value) -> Value {
+    println!("{arg:?}");
+    Value::Number(1)
 }
 
 impl<'src> Interpreter<'src> {
@@ -50,7 +45,7 @@ impl<'src> Interpreter<'src> {
     }
 
     #[allow(dead_code)]
-    pub fn eval_expr_str(&mut self, expr: &'static str) -> PResult<Option<i64>> {
+    pub fn eval_expr_str(&mut self, expr: &'static str) -> PResult<Option<Value>> {
         let mut parser = Parser::new(expr);
         let mut global_env = Environment::new();
 
@@ -78,7 +73,7 @@ impl<'src> Interpreter<'src> {
         match stmt {
             Statement::VarDecl { id, value } => {
                 let value = self.eval_expr_in_env(&value, env)?;
-                println!("DECL: {id} = {value}");
+                println!("DECL: {id} = {value:?}");
 
                 if env.contains_key(id) {
                     return Err(ErrorKind::RuntimeError(format!(
@@ -101,13 +96,19 @@ impl<'src> Interpreter<'src> {
             }
             Statement::FnCall(expr) => {
                 if let Expression::FnCall { id, ref params } = **expr {
-                    let args: Vec<i64> = params
+                    let args: Vec<Value> = params
                         .iter()
                         .map(|p| self.eval_expr_in_env(p, env).unwrap())
                         .collect();
                     self.eval_fn_call(id, &args)?;
                 } else {
                     unreachable!("This should never happen")
+                }
+            }
+            Statement::Return(expr) => {
+                if let None = env.get_ret_val() {
+                    let v = self.eval_expr_in_env(expr, env)?;
+                    env.set_ret_val(v);
                 }
             }
             other => {
@@ -119,20 +120,33 @@ impl<'src> Interpreter<'src> {
         Ok(())
     }
 
-    fn eval_expr_in_env(&self, expr: &Expression, env: &mut Environment<'src>) -> PResult<i64> {
+    fn eval_expr_in_env(&self, expr: &Expression, env: &mut Environment<'src>) -> PResult<Value> {
         match expr {
-            Expression::Number(v) => Ok(*v),
+            Expression::Number(v) => Ok(Value::Number(*v)),
+            Expression::Boolean(v) => Ok(Value::Boolean(*v)),
             Expression::Grouping(expr) => self.eval_expr_in_env(expr, env),
-            Expression::Unary(expr) => Ok(-self.eval_expr_in_env(expr, env)?),
+            Expression::Unary(expr) => match self.eval_expr_in_env(expr, env)? {
+                Value::Number(v) => Ok(Value::Number(-v)),
+                other => Err(ErrorKind::RuntimeError(format!(
+                    "Expected type Number, found {other:?}"
+                ))),
+            },
             Expression::Binary { lhs, op, rhs } => {
                 let lhs = self.eval_expr_in_env(lhs, env)?;
                 let rhs = self.eval_expr_in_env(rhs, env)?;
 
-                match op {
-                    Operator::Plus => Ok(lhs + rhs),
-                    Operator::Minus => Ok(lhs - rhs),
-                    Operator::Mul => Ok(lhs * rhs),
+                if let (Value::Number(lhs), Value::Number(rhs)) = (lhs, rhs) {
+                    let value = match op {
+                        Operator::Plus => lhs + rhs,
+                        Operator::Minus => lhs - rhs,
+                        Operator::Mul => lhs * rhs,
+                    };
+
+                    return Ok(Value::Number(value));
                 }
+                Err(ErrorKind::RuntimeError(format!(
+                    "Operator {op:?} requires two expressions that evaluate to a number"
+                )))
             }
             Expression::VarRef(id) => {
                 if let Some(value) = env.get(id) {
@@ -143,7 +157,7 @@ impl<'src> Interpreter<'src> {
                 )))
             }
             Expression::FnCall { id, params } => {
-                let args: Vec<i64> = params
+                let args: Vec<Value> = params
                     .iter()
                     .map(|p| self.eval_expr_in_env(p, env).unwrap())
                     .collect();
@@ -152,7 +166,7 @@ impl<'src> Interpreter<'src> {
         }
     }
 
-    fn eval_fn_call(&self, id: &'src str, args: &[i64]) -> PResult<i64> {
+    fn eval_fn_call(&self, id: &'src str, args: &[Value]) -> PResult<Value> {
         let decl = match self.functions.get(id) {
             Some(decl) => decl,
             None => {
@@ -177,11 +191,11 @@ impl<'src> Interpreter<'src> {
                 return Ok(func(args[0]));
             }
             FnType::NormalFn { params, body } => {
-                let statements = &body[..body.len() - 1];
+                let statements = &body[..];
 
                 for i in 0..decl.arity as usize {
                     let param = params[i];
-                    let argument = args[i]; //self.eval_expr_in_env(&args[i], &mut env)?;
+                    let argument = args[i];
 
                     env.insert(param, argument);
                 }
@@ -190,10 +204,10 @@ impl<'src> Interpreter<'src> {
                     self.eval_stmt_in_env(stmt, &mut env)?;
                 }
 
-                match body.last() {
-            Some(Statement::Return(expr)) => Ok(self.eval_expr_in_env(expr, &mut env)?),
-            _ => unreachable!("Last statement in function body was not a return statement. This should never happen")
-        }
+                match env.get_ret_val() {
+                    None => Ok(Value::None),
+                    Some(v) => Ok(v),
+                }
             }
         }
     }
@@ -201,7 +215,7 @@ impl<'src> Interpreter<'src> {
 
 #[cfg(test)]
 mod test {
-    use super::Interpreter;
+    use super::{Interpreter, Value};
 
     #[test]
     fn eval_1() {
@@ -209,7 +223,7 @@ mod test {
             .eval_expr_str("4 + 10 * -1")
             .unwrap()
             .unwrap();
-        assert_eq!(value, -6);
+        assert_eq!(value, Value::Number(-6));
     }
 
     #[test]
@@ -218,7 +232,7 @@ mod test {
             .eval_expr_str("(4 + 10) * -1")
             .unwrap()
             .unwrap();
-        assert_eq!(value, -14);
+        assert_eq!(value, Value::Number(-14));
     }
 
     #[test]
@@ -227,7 +241,7 @@ mod test {
             .eval_expr_str("-48 + 9")
             .unwrap()
             .unwrap();
-        assert_eq!(value, -39);
+        assert_eq!(value, Value::Number(-39));
     }
 
     #[test]
@@ -236,7 +250,7 @@ mod test {
             .eval_expr_str("-8 + 5 * (13 - 1) * -1")
             .unwrap()
             .unwrap();
-        assert_eq!(value, -68);
+        assert_eq!(value, Value::Number(-68));
     }
 
     #[test]
@@ -245,6 +259,6 @@ mod test {
             .eval_expr_str("(-8 + 5) * (13 - 1) * -1")
             .unwrap()
             .unwrap();
-        assert_eq!(value, 36);
+        assert_eq!(value, Value::Number(36));
     }
 }

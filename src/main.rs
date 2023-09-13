@@ -6,7 +6,7 @@ mod runtime;
 mod stmt;
 mod token;
 
-use std::{env, path::Path, process};
+use std::{env, path::Path, process, time::Instant};
 
 use runtime::eval::Interpreter;
 
@@ -27,6 +27,8 @@ fn main() {
 
     let src = std::fs::read_to_string(file_path).expect("Failed to read file");
 
+    let now = Instant::now();
+
     let mut interpreter = Interpreter::new();
     match interpreter.eval(&src) {
         Err(why) => {
@@ -34,4 +36,7 @@ fn main() {
         }
         Ok(()) => (),
     }
+
+    let duration = now.elapsed();
+    println!("\n> Duration: {duration:.2?}");
 }

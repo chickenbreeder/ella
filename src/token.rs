@@ -32,6 +32,8 @@ pub(crate) enum Keyword {
     If,
     Else,
     Return,
+    True,
+    False,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

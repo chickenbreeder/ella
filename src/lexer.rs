@@ -84,6 +84,8 @@ impl<'src> Lexer<'src> {
             "if" => Token::Kw(Keyword::If),
             "else" => Token::Kw(Keyword::Else),
             "return" => Token::Kw(Keyword::Return),
+            "true" => Token::Kw(Keyword::True),
+            "false" => Token::Kw(Keyword::False),
             _ => Token::Id(s),
         }
     }
