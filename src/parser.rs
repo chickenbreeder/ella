@@ -84,6 +84,13 @@ impl<'src> Parser<'src> {
                 _ => todo!(),
             },
             Some(Token::Id(id)) => {
+                if let Some(Token::LParen) = self.lexer.peek() {
+                    self.eat();
+                    let expr = self.parse_call_expr(id)?;
+                    self.expect(Token::Semicolon)?;
+                    return Ok(Some(Box::new(Statement::FnCall(expr))));
+                }
+
                 self.expect(Token::Eq)?;
                 let expr = self.expect_expr()?;
                 self.expect(Token::Semicolon)?;
@@ -161,8 +168,7 @@ impl<'src> Parser<'src> {
                 Token::Id(id) => {
                     if let Some(Token::LParen) = self.lexer.peek() {
                         self.eat();
-                        self.expect(Token::RParen)?;
-                        return Ok(Some(Box::new(Expression::FnCall { id, params: vec![] })));
+                        return Ok(Some(self.parse_call_expr(id)?));
                     }
 
                     Ok(Some(Box::new(Expression::VarRef(id))))
@@ -174,6 +180,11 @@ impl<'src> Parser<'src> {
                 ))),
             },
         }
+    }
+
+    fn parse_call_expr(&mut self, id: &'src str) -> PResult<Box<Expression<'src>>> {
+        self.expect(Token::RParen)?;
+        return Ok(Box::new(Expression::FnCall { id, params: vec![] }));
     }
 
     fn expect(&mut self, expected: Token) -> PResult<()> {

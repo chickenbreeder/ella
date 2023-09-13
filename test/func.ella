@@ -1,13 +1,15 @@
 fn bar() {
-    return -6;
+    return -7;
 }
 
 fn main() {
-    let a = foo() + 8;
+    foo();
+    let a = bar() + foo();
     return 1;
 }
 
 fn foo() {
     let z = 40 + bar();
+    z = z + 1;
     return z;
 }

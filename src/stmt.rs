@@ -19,4 +19,5 @@ pub(crate) enum Statement<'src> {
     },
     Return(Box<Expression<'src>>),
     FnDecl(FnDecl<'src>),
+    FnCall(Box<Expression<'src>>),
 }

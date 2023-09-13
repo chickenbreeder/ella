@@ -81,6 +81,13 @@ impl<'src> Interpreter<'src> {
                     )));
                 }
             }
+            Statement::FnCall(expr) => {
+                if let Expression::FnCall { id, ref params } = **expr {
+                    self.eval_fn_call(id, &params)?;
+                } else {
+                    unreachable!("This should never happen")
+                }
+            }
             other => {
                 return Err(ErrorKind::RuntimeError(format!(
                     "Expected statement, found {other:?}"
