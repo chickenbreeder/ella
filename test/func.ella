@@ -15,7 +15,11 @@ fn main() {
     foo();
     let b = inc(40);
     let c = add(8, 5);
-    let a = bar() + foo();
+    let a = -7 + foo();
+    let z =  a;
+
+    print(z);
+    print(a + z * 2);
     return 1;
 }
 

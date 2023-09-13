@@ -5,7 +5,7 @@ use crate::{
     error::{ErrorKind, PResult},
     expr::Expression,
     parser::Parser,
-    stmt::{FnDecl, Statement},
+    stmt::{FnDecl, FnType, Statement},
     token::Operator,
 };
 
@@ -13,11 +13,29 @@ pub(crate) struct Interpreter<'src> {
     functions: HashMap<&'src str, FnDecl<'src>>,
 }
 
+fn native_print(arg: i64) -> i64 {
+    println!("{}", arg);
+    1
+}
+
+fn native_assert(arg0: i64, arg1: i64) -> i64 {
+    assert_eq!(arg0, arg1);
+    1
+}
+
 impl<'src> Interpreter<'src> {
     pub fn new() -> Self {
-        Self {
-            functions: HashMap::new(),
-        }
+        let mut functions = HashMap::new();
+        functions.insert(
+            "print",
+            FnDecl {
+                id: "print",
+                arity: 1,
+                ty: FnType::NativeFn { func: native_print },
+            },
+        );
+
+        Self { functions }
     }
 
     pub fn eval(&mut self, src: &'src str) -> PResult<()> {
@@ -83,7 +101,11 @@ impl<'src> Interpreter<'src> {
             }
             Statement::FnCall(expr) => {
                 if let Expression::FnCall { id, ref params } = **expr {
-                    self.eval_fn_call(id, &params)?;
+                    let args: Vec<i64> = params
+                        .iter()
+                        .map(|p| self.eval_expr_in_env(p, env).unwrap())
+                        .collect();
+                    self.eval_fn_call(id, &args)?;
                 } else {
                     unreachable!("This should never happen")
                 }
@@ -120,11 +142,17 @@ impl<'src> Interpreter<'src> {
                     "Undefined reference `{id}`"
                 )))
             }
-            Expression::FnCall { id, params } => self.eval_fn_call(id, &params),
+            Expression::FnCall { id, params } => {
+                let args: Vec<i64> = params
+                    .iter()
+                    .map(|p| self.eval_expr_in_env(p, env).unwrap())
+                    .collect();
+                self.eval_fn_call(id, &args)
+            }
         }
     }
 
-    fn eval_fn_call(&self, id: &'src str, args: &[Expression<'src>]) -> PResult<i64> {
+    fn eval_fn_call(&self, id: &'src str, args: &[i64]) -> PResult<i64> {
         let decl = match self.functions.get(id) {
             Some(decl) => decl,
             None => {
@@ -142,23 +170,31 @@ impl<'src> Interpreter<'src> {
             )));
         }
 
-        let statements = &decl.body[..decl.body.len() - 1];
         let mut env = Environment::new();
 
-        for i in 0..decl.arity as usize {
-            let param = decl.params[i];
-            let argument = self.eval_expr_in_env(&args[i], &mut env)?;
+        match &decl.ty {
+            FnType::NativeFn { func } => {
+                return Ok(func(args[0]));
+            }
+            FnType::NormalFn { params, body } => {
+                let statements = &body[..body.len() - 1];
 
-            env.insert(param, argument);
-        }
+                for i in 0..decl.arity as usize {
+                    let param = params[i];
+                    let argument = args[i]; //self.eval_expr_in_env(&args[i], &mut env)?;
 
-        for stmt in statements {
-            self.eval_stmt_in_env(stmt, &mut env)?;
-        }
+                    env.insert(param, argument);
+                }
 
-        match decl.body.last() {
+                for stmt in statements {
+                    self.eval_stmt_in_env(stmt, &mut env)?;
+                }
+
+                match body.last() {
             Some(Statement::Return(expr)) => Ok(self.eval_expr_in_env(expr, &mut env)?),
             _ => unreachable!("Last statement in function body was not a return statement. This should never happen")
+        }
+            }
         }
     }
 }

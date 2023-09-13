@@ -2,7 +2,7 @@ use crate::{
     error::{ErrorKind, PResult},
     expr::Expression,
     lexer::Lexer,
-    stmt::{FnDecl, Statement},
+    stmt::{FnDecl, FnType, Statement},
     token::{Assoc, Keyword, Operator, Token},
 };
 use std::iter::Peekable;
@@ -78,8 +78,10 @@ impl<'src> Parser<'src> {
                     Ok(Some(Box::new(Statement::FnDecl(FnDecl {
                         id,
                         arity: params.len() as u8,
-                        params,
-                        body: statements,
+                        ty: FnType::NormalFn {
+                            params,
+                            body: statements,
+                        },
                     }))))
                 }
                 _ => todo!(),
