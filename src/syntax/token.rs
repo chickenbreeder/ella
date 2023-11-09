@@ -10,18 +10,24 @@ pub(crate) enum Assoc {
     Left,
 }
 
+pub(crate) type Precedence = u8;
+
 impl Operator {
-    pub fn get_precedence(self) -> u8 {
+    pub fn precedence(self) -> Precedence {
         match self {
             Self::Plus | Self::Minus => 10,
             Self::Mul => 20,
         }
     }
 
-    pub fn get_assoc(self) -> Assoc {
+    pub fn assoc(self) -> Assoc {
         match self {
             Self::Plus | Self::Minus | Self::Mul => Assoc::Left,
         }
+    }
+
+    pub fn get(self) -> (Precedence, Assoc) {
+        (self.precedence(), self.assoc())
     }
 }
 

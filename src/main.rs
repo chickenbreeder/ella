@@ -26,11 +26,9 @@ fn main() {
     let now = Instant::now();
 
     let mut interpreter = Interpreter::new();
-    match interpreter.eval(&src) {
-        Err(why) => {
-            eprintln!("{why:?}");
-        }
-        Ok(()) => (),
+
+    if let Err(why) = interpreter.eval(&src) {
+        eprintln!("{why:?}");
     }
 
     let duration = now.elapsed();

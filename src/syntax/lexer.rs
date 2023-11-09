@@ -29,7 +29,7 @@ impl<'src> Iterator for Lexer<'src> {
                 if c.is_whitespace() {
                     return self.next();
                 }
-                if c.is_digit(10) {
+                if c.is_ascii_digit() {
                     return Some(self.read_number(off));
                 }
                 if Self::is_id_start(c) {
@@ -69,7 +69,7 @@ impl<'src> Lexer<'src> {
     }
 
     fn read_number(&mut self, from_off: usize) -> Token<'src> {
-        let s = self.slice_until(from_off, |c| !c.is_digit(10));
+        let s = self.slice_until(from_off, |c| !c.is_ascii_digit());
         Token::Number(
             s.parse::<i64>()
                 .expect("Failed to parse number. (This should never happen)"),
@@ -92,15 +92,14 @@ impl<'src> Lexer<'src> {
 
     fn is_id_start(c: char) -> bool {
         match c {
-            c if c >= 'a' && c <= 'z' => true,
-            c if c >= 'A' && c <= 'Z' => true,
+            'a'..='z' | 'A'..='Z' => true,
             '_' => true,
             _ => false,
         }
     }
 
     fn is_id_part(c: char) -> bool {
-        Self::is_id_start(c) || c.is_digit(10)
+        Self::is_id_start(c) || c.is_ascii_digit()
     }
 }
 

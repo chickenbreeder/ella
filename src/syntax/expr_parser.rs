@@ -1,7 +1,7 @@
 use crate::error::{ErrorKind, PResult};
 
 use super::{
-    token::{Assoc, Keyword, Token},
+    token::{Assoc, Keyword, Precedence, Token},
     ExprParser, Expression, Operator, Parser,
 };
 
@@ -12,7 +12,7 @@ impl<'src> ExprParser<'src> for Parser<'src> {
 
     fn parse_expr_with_precedence(
         &mut self,
-        min_prec: u8,
+        min_prec: Precedence,
     ) -> PResult<Option<Box<Expression<'src>>>> {
         let mut lhs = match self.parse_expr_lhs()? {
             None => return Ok(None),
@@ -20,19 +20,15 @@ impl<'src> ExprParser<'src> for Parser<'src> {
         };
 
         while let Some(Token::Op(op)) = self.lexer.peek() {
-            let op = op.clone();
-            let op_prec = op.get_precedence();
+            let op = *op;
+            let (prec, assoc) = op.get();
 
-            if op_prec < min_prec {
+            if prec < min_prec {
                 break;
             }
             self.bump();
 
-            let new_min_prec = if op.get_assoc() == Assoc::Left {
-                op_prec + 1
-            } else {
-                op_prec
-            };
+            let new_min_prec = if assoc == Assoc::Left { prec + 1 } else { prec };
 
             let rhs = match self.parse_expr_with_precedence(new_min_prec)? {
                 None => {
@@ -123,5 +119,51 @@ impl<'src> ExprParser<'src> for Parser<'src> {
         }
         self.eat();
         Ok(Box::new(Expression::FnCall { id, params: args }))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Parser;
+    use crate::syntax::{expr::Expression, token::Operator, ExprParser};
+
+    #[test]
+    fn parse_binary_expr() {
+        use Expression::*;
+        use Operator::*;
+
+        let mut parser = Parser::new("-5 + 4 * 7");
+        let expr = parser.parse_expr().unwrap().unwrap();
+        let expected = Box::new(Binary {
+            lhs: Box::new(Unary(Box::new(Number(5)))),
+            op: Plus,
+            rhs: Box::new(Binary {
+                lhs: Box::new(Number(4)),
+                op: Mul,
+                rhs: Box::new(Number(7)),
+            }),
+        });
+
+        assert_eq!(expr, expected);
+    }
+
+    #[test]
+    fn parse_binary_expr_2() {
+        use Expression::*;
+        use Operator::*;
+
+        let mut parser = Parser::new("(-5 + 4) * 7");
+        let expr = parser.parse_expr().unwrap().unwrap();
+        let expected = Box::new(Binary {
+            lhs: Box::new(Grouping(Box::new(Binary {
+                lhs: Box::new(Unary(Box::new(Number(5)))),
+                op: Plus,
+                rhs: Box::new(Number(4)),
+            }))),
+            op: Mul,
+            rhs: Box::new(Number(7)),
+        });
+
+        assert_eq!(expr, expected);
     }
 }

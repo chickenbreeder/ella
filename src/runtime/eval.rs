@@ -69,7 +69,7 @@ impl<'src> Interpreter<'src> {
     fn eval_stmt_in_env(&self, stmt: &Statement<'src>, env: &mut Environment<'src>) -> PResult<()> {
         match stmt {
             Statement::VarDecl { id, value } => {
-                let value = self.eval_expr_in_env(&value, env)?;
+                let value = self.eval_expr_in_env(value, env)?;
                 println!("DECL: {id} = {value:?}");
 
                 if env.contains_key(id) {
@@ -81,7 +81,7 @@ impl<'src> Interpreter<'src> {
                 }
             }
             Statement::Assignment { id, value } => {
-                let value = self.eval_expr_in_env(&value, env)?;
+                let value = self.eval_expr_in_env(value, env)?;
 
                 if let Some(v) = env.get_mut(id) {
                     *v = value;
@@ -103,7 +103,7 @@ impl<'src> Interpreter<'src> {
                 }
             }
             Statement::Return(expr) => {
-                if let None = env.get_ret_val() {
+                if env.get_ret_val().is_none() {
                     let v = self.eval_expr_in_env(expr, env)?;
                     env.set_ret_val(v);
                 }
@@ -184,9 +184,7 @@ impl<'src> Interpreter<'src> {
         let mut env = Environment::new();
 
         match &decl.ty {
-            FnType::NativeFn { func } => {
-                return Ok(func(args[0]));
-            }
+            FnType::NativeFn { func } => Ok(func(args[0])),
             FnType::NormalFn { params, body } => {
                 let statements = &body[..];
 

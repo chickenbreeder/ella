@@ -11,11 +11,13 @@ pub(crate) use token::Operator;
 
 use crate::error::PResult;
 
+use self::token::Precedence;
+
 pub(crate) trait ExprParser<'src> {
     fn parse_expr(&mut self) -> PResult<Option<Box<Expression<'src>>>>;
     fn parse_expr_with_precedence(
         &mut self,
-        min_prec: u8,
+        min_prec: Precedence,
     ) -> PResult<Option<Box<Expression<'src>>>>;
     fn parse_expr_lhs(&mut self) -> PResult<Option<Box<Expression<'src>>>>;
     fn parse_grouping_expr(&mut self) -> PResult<Option<Box<Expression<'src>>>>;

@@ -3,7 +3,7 @@ use crate::{
     syntax::{
         lexer::Lexer,
         stmt::{FnDecl, FnType, Statement},
-        token::{Assoc, Keyword, Operator, Token},
+        token::{Keyword, Token},
         ExprParser, Expression,
     },
 };
@@ -177,47 +177,7 @@ impl<'src> Parser<'src> {
 #[cfg(test)]
 mod test {
     use super::Parser;
-    use crate::syntax::{expr::Expression, stmt::Statement, token::Operator, ExprParser};
-
-    #[test]
-    fn parse_binary_expr() {
-        use Expression::*;
-        use Operator::*;
-
-        let mut parser = Parser::new("-5 + 4 * 7");
-        let expr = parser.parse_expr().unwrap().unwrap();
-        let expected = Box::new(Binary {
-            lhs: Box::new(Unary(Box::new(Number(5)))),
-            op: Plus,
-            rhs: Box::new(Binary {
-                lhs: Box::new(Number(4)),
-                op: Mul,
-                rhs: Box::new(Number(7)),
-            }),
-        });
-
-        assert_eq!(expr, expected);
-    }
-
-    #[test]
-    fn parse_binary_expr_2() {
-        use Expression::*;
-        use Operator::*;
-
-        let mut parser = Parser::new("(-5 + 4) * 7");
-        let expr = parser.parse_expr().unwrap().unwrap();
-        let expected = Box::new(Binary {
-            lhs: Box::new(Grouping(Box::new(Binary {
-                lhs: Box::new(Unary(Box::new(Number(5)))),
-                op: Plus,
-                rhs: Box::new(Number(4)),
-            }))),
-            op: Mul,
-            rhs: Box::new(Number(7)),
-        });
-
-        assert_eq!(expr, expected);
-    }
+    use crate::syntax::{expr::Expression, stmt::Statement};
 
     #[test]
     fn parse_let_stmt() {
