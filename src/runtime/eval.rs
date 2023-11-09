@@ -5,7 +5,7 @@ use crate::{
     error::{ErrorKind, PResult},
     syntax::{
         stmt::{FnDecl, FnType, Statement},
-        Expression, Operator, Parser,
+        ExprParser, Expression, Operator, Parser,
     },
 };
 
