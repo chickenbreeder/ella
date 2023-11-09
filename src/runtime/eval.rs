@@ -108,6 +108,13 @@ impl<'src> Interpreter<'src> {
                     env.set_ret_val(v);
                 }
             }
+            Statement::Block(stmts) => {
+                let mut env = Environment::new();
+
+                for s in stmts.iter() {
+                    self.eval_stmt_in_env(s, &mut env)?;
+                }
+            }
             other => {
                 return Err(ErrorKind::RuntimeError(format!(
                     "Expected statement, found {other:?}"

@@ -21,60 +21,55 @@ impl<'src> Parser<'src> {
     }
 
     pub fn parse_stmt(&mut self) -> PResult<Option<Box<Statement<'src>>>> {
-        match self.lexer.next() {
+        match self.lexer.peek() {
             None => Ok(None),
-            Some(Token::Kw(kw)) => match kw {
-                Keyword::Let => {
-                    let id = self.parse_id()?;
-                    self.expect(Token::Eq)?;
-                    let expr = self.expect_expr()?;
-                    self.expect(Token::Semicolon)?;
+            Some(Token::Kw(kw)) => {
+                let kw = *kw;
+                self.bump();
 
-                    Ok(Some(Box::new(Statement::VarDecl { id, value: expr })))
-                }
-                Keyword::Return => {
-                    let expr = self.expect_expr()?;
-                    self.expect(Token::Semicolon)?;
+                match kw {
+                    Keyword::Let => {
+                        let id = self.parse_id()?;
+                        self.expect(Token::Eq)?;
+                        let expr = self.expect_expr()?;
+                        self.expect(Token::Semicolon)?;
 
-                    Ok(Some(Box::new(Statement::Return(expr))))
-                }
-                Keyword::Fn => {
-                    let id = self.parse_id()?;
-                    let mut statements = vec![];
-
-                    self.expect(Token::LParen)?;
-                    let params = self.parse_fn_params()?;
-                    self.expect(Token::LCurly)?;
-
-                    loop {
-                        if let Some(Token::RCurly) = self.lexer.peek() {
-                            self.eat();
-                            break;
-                        }
-
-                        let stmt = match self.parse_stmt()? {
-                            Some(stmt) => stmt,
-                            None => {
-                                return Err(ErrorKind::ParseError(
-                                    "Expected statement or `}`, found EOF".into(),
-                                ))
-                            }
-                        };
-                        statements.push(*stmt);
+                        Ok(Some(Box::new(Statement::VarDecl { id, value: expr })))
                     }
+                    Keyword::Return => {
+                        let expr = self.expect_expr()?;
+                        self.expect(Token::Semicolon)?;
 
-                    Ok(Some(Box::new(Statement::FnDecl(FnDecl {
-                        id,
-                        arity: params.len() as u8,
-                        ty: FnType::NormalFn {
-                            params,
-                            body: statements,
-                        },
-                    }))))
+                        Ok(Some(Box::new(Statement::Return(expr))))
+                    }
+                    Keyword::Fn => {
+                        let id = self.parse_id()?;
+                        self.expect(Token::LParen)?;
+                        let params = self.parse_fn_params()?;
+
+                        match *self.parse_block()? {
+                            Statement::Block(statements) => {
+                                Ok(Some(Box::new(Statement::FnDecl(FnDecl {
+                                    id,
+                                    arity: params.len() as u8,
+                                    ty: FnType::NormalFn {
+                                        params,
+                                        body: statements,
+                                    },
+                                }))))
+                            }
+                            other => Err(ErrorKind::ParseError(format!(
+                                "Expected a block statement, found {other:?}"
+                            ))),
+                        }
+                    }
+                    _ => todo!(),
                 }
-                _ => todo!(),
-            },
+            }
             Some(Token::Id(id)) => {
+                let id = *id;
+                self.bump();
+
                 if let Some(Token::LParen) = self.lexer.peek() {
                     self.eat();
                     let expr = self.parse_call_expr(id)?;
@@ -86,6 +81,10 @@ impl<'src> Parser<'src> {
                 let expr = self.expect_expr()?;
                 self.expect(Token::Semicolon)?;
                 Ok(Some(Box::new(Statement::Assignment { id, value: expr })))
+            }
+            Some(Token::LCurly) => {
+                let stmt = self.parse_block()?;
+                Ok(Some(stmt))
             }
             other => Err(ErrorKind::ParseError(format!(
                 "Expected statement, found {other:?}"
@@ -142,6 +141,30 @@ impl<'src> Parser<'src> {
         }
         self.eat();
         Ok(params)
+    }
+
+    fn parse_block(&mut self) -> PResult<Box<Statement<'src>>> {
+        let mut statements = vec![];
+        self.expect(Token::LCurly)?;
+
+        loop {
+            if let Some(Token::RCurly) = self.lexer.peek() {
+                self.eat();
+                break;
+            }
+
+            let stmt = match self.parse_stmt()? {
+                Some(stmt) => stmt,
+                None => {
+                    return Err(ErrorKind::ParseError(
+                        "Expected statement or `}`, found EOF".into(),
+                    ))
+                }
+            };
+            statements.push(*stmt);
+        }
+
+        Ok(Box::new(Statement::Block(statements)))
     }
 
     pub(super) fn expect(&mut self, expected: Token) -> PResult<()> {

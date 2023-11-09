@@ -1,0 +1,8 @@
+fn main() {
+    let a = 40;
+
+    {
+        let b = a + 2;
+        print(b);
+    }
+}

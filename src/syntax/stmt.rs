@@ -29,6 +29,7 @@ pub(crate) enum Statement<'src> {
         value: Box<Expression<'src>>,
     },
     Return(Box<Expression<'src>>),
+    Block(Vec<Statement<'src>>),
     FnDecl(FnDecl<'src>),
     FnCall(Box<Expression<'src>>),
     If {

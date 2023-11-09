@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use super::value::Value;
 
+// TODO: Needs refactoring. An Environment should really just be an alias for a HashMap.
+// This `ret_val` thing is a really ugly hack.
 pub(crate) struct Environment<'src> {
     entries: HashMap<&'src str, Value>,
     ret_val: Option<Value>,
@@ -11,6 +13,15 @@ impl<'src> Environment<'src> {
     pub fn new() -> Self {
         Self {
             entries: HashMap::new(),
+            ret_val: None,
+        }
+    }
+
+    pub fn from(other: Environment<'src>) -> Self {
+        let entries = HashMap::from(other.entries);
+
+        Self {
+            entries,
             ret_val: None,
         }
     }
