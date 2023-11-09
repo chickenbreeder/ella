@@ -1,4 +1,4 @@
-use crate::{expr::Expression, runtime::value::Value};
+use crate::{runtime::value::Value, syntax::expr::Expression};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum FnType<'src> {
@@ -31,4 +31,8 @@ pub(crate) enum Statement<'src> {
     Return(Box<Expression<'src>>),
     FnDecl(FnDecl<'src>),
     FnCall(Box<Expression<'src>>),
+    If {
+        condition: Box<Expression<'src>>,
+        else_condition: Option<Box<Expression<'src>>>,
+    },
 }

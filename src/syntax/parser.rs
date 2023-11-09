@@ -1,9 +1,11 @@
 use crate::{
     error::{ErrorKind, PResult},
-    expr::Expression,
-    lexer::Lexer,
-    stmt::{FnDecl, FnType, Statement},
-    token::{Assoc, Keyword, Operator, Token},
+    syntax::{
+        lexer::Lexer,
+        stmt::{FnDecl, FnType, Statement},
+        token::{Assoc, Keyword, Operator, Token},
+        Expression,
+    },
 };
 use std::iter::Peekable;
 
@@ -294,7 +296,7 @@ impl<'src> Parser<'src> {
 #[cfg(test)]
 mod test {
     use super::Parser;
-    use crate::{expr::Expression, stmt::Statement, token::Operator};
+    use crate::syntax::{expr::Expression, stmt::Statement, token::Operator};
 
     #[test]
     fn parse_binary_expr() {

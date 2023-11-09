@@ -9,6 +9,6 @@ fn foo() {
 fn main() {
     let a = foo();
 
-    print(a);
+    let b = print(a);
     print(bar());
 }

@@ -1,21 +1,16 @@
 use std::collections::HashMap;
 
-use super::{env::Environment, value::Value};
+use super::{builtin, env::Environment, value::Value};
 use crate::{
     error::{ErrorKind, PResult},
-    expr::Expression,
-    parser::Parser,
-    stmt::{FnDecl, FnType, Statement},
-    token::Operator,
+    syntax::{
+        stmt::{FnDecl, FnType, Statement},
+        Expression, Operator, Parser,
+    },
 };
 
 pub(crate) struct Interpreter<'src> {
     functions: HashMap<&'src str, FnDecl<'src>>,
-}
-
-fn native_print(arg: Value) -> Value {
-    println!("{arg:?}");
-    Value::Number(1)
 }
 
 impl<'src> Interpreter<'src> {
@@ -26,7 +21,9 @@ impl<'src> Interpreter<'src> {
             FnDecl {
                 id: "print",
                 arity: 1,
-                ty: FnType::NativeFn { func: native_print },
+                ty: FnType::NativeFn {
+                    func: builtin::native::print,
+                },
             },
         );
 

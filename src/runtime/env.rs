@@ -39,5 +39,3 @@ impl<'src> Environment<'src> {
         self.ret_val = Some(v);
     }
 }
-
-//pub(super) type Environment<'src> = HashMap<&'src str, Value>;

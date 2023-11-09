@@ -1,10 +1,6 @@
 mod error;
-mod expr;
-mod lexer;
-mod parser;
 mod runtime;
-mod stmt;
-mod token;
+mod syntax;
 
 use std::{env, path::Path, process, time::Instant};
 

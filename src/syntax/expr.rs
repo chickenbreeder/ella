@@ -1,4 +1,4 @@
-use crate::token::Operator;
+use super::token::Operator;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum Expression<'src> {

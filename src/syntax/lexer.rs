@@ -1,6 +1,6 @@
 use std::{iter::Peekable, str::CharIndices};
 
-use crate::token::{Keyword, Operator, Token};
+use super::token::{Keyword, Operator, Token};
 
 pub(crate) struct Lexer<'src> {
     src: &'src str,
@@ -106,8 +106,7 @@ impl<'src> Lexer<'src> {
 
 #[cfg(test)]
 mod test {
-    use super::Lexer;
-    use crate::token::Token;
+    use super::{super::token::Token, Lexer};
 
     fn tokenize_str(s: &str) -> Vec<Token> {
         Lexer::new(s).into_iter().collect()
