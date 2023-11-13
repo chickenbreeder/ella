@@ -11,6 +11,8 @@ pub(crate) enum Expression<'src> {
         rhs: Box<Expression<'src>>,
     },
     VarRef(&'src str),
+    List(Vec<Expression<'src>>),
+    ListAccess(&'src str, Box<Expression<'src>>),
     FnCall {
         id: &'src str,
         params: Vec<Expression<'src>>,

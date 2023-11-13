@@ -50,15 +50,32 @@ impl<'src> ExprParser<'src> for Parser<'src> {
             None => Ok(None),
             Some(token) => match token {
                 Token::Number(v) => Ok(Some(Box::new(Expression::Number(v)))),
-                Token::Id(id) => {
-                    if let Some(Token::LParen) = self.lexer.peek() {
+                Token::Id(id) => match self.lexer.peek() {
+                    Some(Token::LParen) => {
                         self.eat();
-                        return Ok(Some(self.parse_call_expr(id)?));
+                        Ok(Some(self.parse_call_expr(id)?))
                     }
+                    Some(Token::LBracket) => {
+                        self.eat();
+                        let idx = match self.parse_expr_lhs()? {
+                            Some(idx_expr) => idx_expr,
+                            None => {
+                                return Err(ErrorKind::ParseError(
+                                    "Expected expression, found EOF".into(),
+                                ))
+                            }
+                        };
 
-                    Ok(Some(Box::new(Expression::VarRef(id))))
-                }
+                        self.expect(Token::RBracket)?;
+                        return Ok(Some(Box::new(Expression::ListAccess(id, idx))));
+                    }
+                    _ => Ok(Some(Box::new(Expression::VarRef(id)))),
+                },
                 Token::LParen => self.parse_grouping_expr(),
+                Token::LBracket => {
+                    let expr = self.parse_list_expr()?;
+                    Ok(Some(expr))
+                }
                 Token::Op(Operator::Minus) => self.parse_unary_expr(),
                 Token::Kw(Keyword::True) => Ok(Some(Box::new(Expression::Boolean(true)))),
                 Token::Kw(Keyword::False) => Ok(Some(Box::new(Expression::Boolean(false)))),
@@ -119,6 +136,41 @@ impl<'src> ExprParser<'src> for Parser<'src> {
         }
         self.eat();
         Ok(Box::new(Expression::FnCall { id, params: args }))
+    }
+
+    fn parse_list_expr(&mut self) -> PResult<Box<Expression<'src>>> {
+        let mut args = vec![];
+
+        match self.lexer.peek() {
+            Some(Token::RBracket) => (),
+            _ => {
+                let expr = self.expect_expr()?;
+                args.push(*expr);
+
+                loop {
+                    match self.lexer.peek() {
+                        None => {
+                            return Err(ErrorKind::ParseError(
+                                "Expected `,` or `]`, found EOF".into(),
+                            ))
+                        }
+                        Some(Token::RBracket) => break,
+                        Some(Token::Comma) => {
+                            self.eat();
+                            let expr = self.expect_expr()?;
+                            args.push(*expr);
+                        }
+                        other => {
+                            return Err(ErrorKind::ParseError(format!(
+                                "Expected `,` or `]`, found {other:?}"
+                            )))
+                        }
+                    }
+                }
+            }
+        }
+        self.eat();
+        Ok(Box::new(Expression::List(args)))
     }
 }
 

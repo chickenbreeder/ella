@@ -1,0 +1,7 @@
+fn main() {
+    let b = 42;
+    let a = [4, b, 6, 7];
+    assert_eq([4, 4]);
+
+    print(a[0]);
+}

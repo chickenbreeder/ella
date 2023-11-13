@@ -167,6 +167,44 @@ impl<'src> Parser<'src> {
         Ok(Box::new(Statement::Block(statements)))
     }
 
+    pub(super) fn parse_rep<T, F>(&mut self, mut producer: F) -> PResult<Vec<T>>
+    where
+        F: FnMut() -> PResult<T>,
+    {
+        let mut result = vec![];
+
+        match self.lexer.peek() {
+            Some(Token::RParen) => (),
+            _ => {
+                let param = producer()?; //self.parse_id()?;
+                result.push(param);
+
+                loop {
+                    match self.lexer.peek() {
+                        None => {
+                            return Err(ErrorKind::ParseError(
+                                "Expected `,` or `)`, found EOF".into(),
+                            ))
+                        }
+                        Some(Token::RParen) => break,
+                        Some(Token::Comma) => {
+                            self.eat();
+                            let param = producer()?;
+                            result.push(param);
+                        }
+                        other => {
+                            return Err(ErrorKind::ParseError(format!(
+                                "Expected `,` or `)`, found {other:?}"
+                            )))
+                        }
+                    }
+                }
+            }
+        }
+        self.eat();
+        Ok(result)
+    }
+
     pub(super) fn expect(&mut self, expected: Token) -> PResult<()> {
         match self.lexer.next() {
             None => Err(ErrorKind::ParseError(format!(

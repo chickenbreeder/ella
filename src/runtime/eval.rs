@@ -26,6 +26,16 @@ impl<'src> Interpreter<'src> {
                 },
             },
         );
+        functions.insert(
+            "assert_eq",
+            FnDecl {
+                id: "assert_eq",
+                arity: 1,
+                ty: FnType::NativeFn {
+                    func: builtin::native::assert_eq,
+                },
+            },
+        );
 
         Self { functions }
     }
@@ -154,11 +164,56 @@ impl<'src> Interpreter<'src> {
             }
             Expression::VarRef(id) => {
                 if let Some(value) = env.get(id) {
-                    return Ok(*value);
+                    return Ok(value.clone());
                 }
                 Err(ErrorKind::RuntimeError(format!(
                     "Undefined reference `{id}`"
                 )))
+            }
+            Expression::List(expressions) => {
+                let mut values = vec![];
+
+                for e in expressions.iter() {
+                    let v = self.eval_expr_in_env(e, env)?;
+                    values.push(v);
+                }
+
+                Ok(Value::List(values))
+            }
+            Expression::ListAccess(id, idx) => {
+                let values = match env.get(id) {
+                    Some(Value::List(values)) => values,
+                    None => {
+                        return Err(ErrorKind::RuntimeError(format!(
+                            "Undefined reference `{id}`"
+                        )))
+                    }
+                    other => {
+                        return Err(ErrorKind::RuntimeError(format!(
+                            "List access operator can not be used for `{other:?}`"
+                        )))
+                    }
+                };
+                let values = values.clone();
+
+                let idx = self.eval_expr_in_env(idx, env)?;
+
+                if let Value::Number(idx) = idx {
+                    return Ok(values[idx as usize].clone());
+                }
+                Err(ErrorKind::RuntimeError(
+                    "List index must evaluate to number".into(),
+                ))
+                /*if let Some(Value::List(values)) = env.get(id) {
+                    let idx = self.eval_expr_in_env(idx, env)?;
+                    if let Value::Number(idx) = idx {
+                        return Ok(values[idx as usize].clone());
+                    }
+                    return Err(ErrorKind::RuntimeError("List index must evaluate to number".into()));
+                }
+                Err(ErrorKind::RuntimeError(format!(
+                    "Undefined reference `{id}`"
+                )))*/
             }
             Expression::FnCall { id, params } => {
                 let args: Vec<Value> = params
@@ -191,13 +246,13 @@ impl<'src> Interpreter<'src> {
         let mut env = Environment::new();
 
         match &decl.ty {
-            FnType::NativeFn { func } => Ok(func(args[0])),
+            FnType::NativeFn { func } => Ok(func(args[0].clone())),
             FnType::NormalFn { params, body } => {
                 let statements = &body[..];
 
                 for i in 0..decl.arity as usize {
                     let param = params[i];
-                    let argument = args[i];
+                    let argument = args[i].clone();
 
                     env.insert(param, argument);
                 }
@@ -208,7 +263,7 @@ impl<'src> Interpreter<'src> {
 
                 match env.get_ret_val() {
                     None => Ok(Value::None),
-                    Some(v) => Ok(v),
+                    Some(v) => Ok(v.clone()),
                 }
             }
         }

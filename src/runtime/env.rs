@@ -18,7 +18,7 @@ impl<'src> Environment<'src> {
     }
 
     pub fn from(other: Environment<'src>) -> Self {
-        let entries = HashMap::from(other.entries);
+        let entries = other.entries;
 
         Self {
             entries,
@@ -42,8 +42,11 @@ impl<'src> Environment<'src> {
         self.entries.contains_key(k)
     }
 
-    pub fn get_ret_val(&self) -> Option<Value> {
-        self.ret_val
+    pub fn get_ret_val(&self) -> Option<&Value> {
+        if let Some(v) = &self.ret_val {
+            return Some(v);
+        }
+        None
     }
 
     pub fn set_ret_val(&mut self, v: Value) {

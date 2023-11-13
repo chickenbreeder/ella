@@ -1,3 +1,4 @@
+mod codegen;
 mod error;
 mod runtime;
 mod syntax;
