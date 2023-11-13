@@ -8,6 +8,8 @@ use std::{env, path::Path, process, time::Instant};
 use runtime::eval::Interpreter;
 
 fn main() {
+    env_logger::init();
+
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 2 {
@@ -33,5 +35,5 @@ fn main() {
     }
 
     let duration = now.elapsed();
-    println!("\n> Duration: {duration:.2?}");
+    log::debug!("Duration: {duration:.2?}");
 }

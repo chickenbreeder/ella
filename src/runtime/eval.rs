@@ -80,7 +80,7 @@ impl<'src> Interpreter<'src> {
         match stmt {
             Statement::VarDecl { id, value } => {
                 let value = self.eval_expr_in_env(value, env)?;
-                println!("DECL: {id} = {value:?}");
+                log::debug!("DECL: {id} = {value:?}");
 
                 if env.contains_key(id) {
                     return Err(ErrorKind::RuntimeError(format!(
