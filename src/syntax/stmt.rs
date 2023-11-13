@@ -2,10 +2,10 @@ use crate::{runtime::value::Value, syntax::expr::Expression};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum FnType<'src> {
-    NativeFn {
+    ForeignFn {
         func: fn(Value) -> Value,
     },
-    NormalFn {
+    NativeFn {
         params: Vec<&'src str>,
         body: Vec<Statement<'src>>,
     },

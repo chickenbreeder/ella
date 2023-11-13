@@ -52,7 +52,7 @@ impl<'src> Parser<'src> {
                                 Ok(Some(Box::new(Statement::FnDecl(FnDecl {
                                     id,
                                     arity: params.len() as u8,
-                                    ty: FnType::NormalFn {
+                                    ty: FnType::NativeFn {
                                         params,
                                         body: statements,
                                     },

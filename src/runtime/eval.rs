@@ -21,7 +21,7 @@ impl<'src> Interpreter<'src> {
             FnDecl {
                 id: "print",
                 arity: 1,
-                ty: FnType::NativeFn {
+                ty: FnType::ForeignFn {
                     func: builtin::native::print,
                 },
             },
@@ -31,7 +31,7 @@ impl<'src> Interpreter<'src> {
             FnDecl {
                 id: "assert_eq",
                 arity: 1,
-                ty: FnType::NativeFn {
+                ty: FnType::ForeignFn {
                     func: builtin::native::assert_eq,
                 },
             },
@@ -204,16 +204,6 @@ impl<'src> Interpreter<'src> {
                 Err(ErrorKind::RuntimeError(
                     "List index must evaluate to number".into(),
                 ))
-                /*if let Some(Value::List(values)) = env.get(id) {
-                    let idx = self.eval_expr_in_env(idx, env)?;
-                    if let Value::Number(idx) = idx {
-                        return Ok(values[idx as usize].clone());
-                    }
-                    return Err(ErrorKind::RuntimeError("List index must evaluate to number".into()));
-                }
-                Err(ErrorKind::RuntimeError(format!(
-                    "Undefined reference `{id}`"
-                )))*/
             }
             Expression::FnCall { id, params } => {
                 let args: Vec<Value> = params
@@ -246,8 +236,8 @@ impl<'src> Interpreter<'src> {
         let mut env = Environment::new();
 
         match &decl.ty {
-            FnType::NativeFn { func } => Ok(func(args[0].clone())),
-            FnType::NormalFn { params, body } => {
+            FnType::ForeignFn { func } => Ok(func(args[0].clone())),
+            FnType::NativeFn { params, body } => {
                 let statements = &body[..];
 
                 for i in 0..decl.arity as usize {
