@@ -20,7 +20,37 @@ impl<'src> Parser<'src> {
         }
     }
 
-    pub fn parse_stmt(&mut self) -> PResult<Option<Box<Statement<'src>>>> {
+    pub fn parse_top_level_stmt(&mut self) -> PResult<Option<Box<Statement<'src>>>> {
+        match self.lexer.peek() {
+            None => Ok(None),
+            Some(Token::Kw(Keyword::Fn)) => {
+                self.bump();
+
+                let id = self.parse_id()?;
+                self.expect(Token::LParen)?;
+                let params = self.parse_fn_params()?;
+
+                match *self.parse_block()? {
+                    Statement::Block(statements) => Ok(Some(Box::new(Statement::FnDecl(FnDecl {
+                        id,
+                        arity: params.len() as u8,
+                        ty: FnType::NativeFn {
+                            params,
+                            body: statements,
+                        },
+                    })))),
+                    other => Err(ErrorKind::ParseError(format!(
+                        "Expected a block statement, found {other:?}"
+                    ))),
+                }
+            }
+            other => Err(ErrorKind::ParseError(format!(
+                "Expected top-level statement, found {other:?}"
+            ))),
+        }
+    }
+
+    fn parse_stmt(&mut self) -> PResult<Option<Box<Statement<'src>>>> {
         match self.lexer.peek() {
             None => Ok(None),
             Some(Token::Kw(kw)) => {
@@ -42,28 +72,9 @@ impl<'src> Parser<'src> {
 
                         Ok(Some(Box::new(Statement::Return(expr))))
                     }
-                    Keyword::Fn => {
-                        let id = self.parse_id()?;
-                        self.expect(Token::LParen)?;
-                        let params = self.parse_fn_params()?;
-
-                        match *self.parse_block()? {
-                            Statement::Block(statements) => {
-                                Ok(Some(Box::new(Statement::FnDecl(FnDecl {
-                                    id,
-                                    arity: params.len() as u8,
-                                    ty: FnType::NativeFn {
-                                        params,
-                                        body: statements,
-                                    },
-                                }))))
-                            }
-                            other => Err(ErrorKind::ParseError(format!(
-                                "Expected a block statement, found {other:?}"
-                            ))),
-                        }
-                    }
-                    _ => todo!(),
+                    other => Err(ErrorKind::ParseError(format!(
+                        "Expected statement, found {other:?}"
+                    ))),
                 }
             }
             Some(Token::Id(id)) => {

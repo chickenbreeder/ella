@@ -43,7 +43,7 @@ impl<'src> Interpreter<'src> {
     pub fn eval(&mut self, src: &'src str) -> PResult<()> {
         let mut parser = Parser::new(src);
 
-        while let Some(stmt) = parser.parse_stmt()? {
+        while let Some(stmt) = parser.parse_top_level_stmt()? {
             self.eval_top_level_stmt(stmt)?;
         }
 
