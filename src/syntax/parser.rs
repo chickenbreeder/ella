@@ -64,7 +64,7 @@ impl<'src> Parser<'src> {
                         let expr = self.expect_expr()?;
                         self.expect(Token::Semicolon)?;
 
-                        Ok(Some(Box::new(Statement::VarDecl { id, value: expr })))
+                        Ok(Some(Box::new(Statement::LetDecl { id, value: expr })))
                     }
                     Keyword::Return => {
                         let expr = self.expect_expr()?;
@@ -255,7 +255,7 @@ mod test {
     fn parse_let_stmt() {
         let mut parser = Parser::new("let a = 42;");
         let expr = parser.parse_stmt().unwrap().unwrap();
-        let expected = Box::new(Statement::VarDecl {
+        let expected = Box::new(Statement::LetDecl {
             id: "a",
             value: Box::new(Expression::Number(42)),
         });

@@ -20,7 +20,7 @@ pub(crate) struct FnDecl<'src> {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum Statement<'src> {
-    VarDecl {
+    LetDecl {
         id: &'src str,
         value: Box<Expression<'src>>,
     },
