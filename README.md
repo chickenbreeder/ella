@@ -1,5 +1,7 @@
 # ella
 
+A small programming language that can be compiled to WASM.
+
 ```
 Usage: ella <COMMAND>
 
@@ -11,15 +13,15 @@ Commands:
 Options:
   -h, --help  Print help
 ```
-<small>(Note: Compile only works for <u>test/simple.ella</u> right now)</small>
+<sub>(Note: Compile only works for test/simple.ella right now)</sub>
 
 ## Goals
 
-* Create a small language that can be compiled to WASM without any additional tooling
+* Create a language that can be compiled to WASM without any additional tooling
 
 ### Maybe?
 
-* Build an LSP server on top of this
+* Build a LSP server on top of this
 
 ## Things that are missing/broken
 
