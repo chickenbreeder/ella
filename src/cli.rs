@@ -18,6 +18,10 @@ pub(crate) enum Command {
         /// Print the generated WASM to stdout
         #[arg(long, action=clap::ArgAction::SetTrue)]
         print_bytes: bool,
+
+        /// Generate WAT (WebAssembly Text Format) instead of binary
+        #[arg(long, action=clap::ArgAction::SetTrue)]
+        wat: bool,
     },
 
     /// Evaluate the generated AST

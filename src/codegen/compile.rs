@@ -1,4 +1,6 @@
-use wasm_encoder::{CodeSection, Function, Instruction, Module, ValType};
+use wasm_encoder::{
+    CodeSection, ExportKind, ExportSection, Function, FunctionSection, Instruction, Module, ValType,
+};
 
 use crate::{
     error::{ErrorKind, PResult},
@@ -22,6 +24,15 @@ impl<'src> Compiler<'src> {
     pub fn compile(&mut self) -> PResult<Vec<u8>> {
         let mut module = Module::new();
         let mut code = CodeSection::new();
+
+        let mut functions = FunctionSection::new();
+        let type_index = 0;
+        functions.function(type_index);
+        module.section(&functions);
+
+        let mut exports = ExportSection::new();
+        exports.export("main", ExportKind::Func, 0);
+        module.section(&exports);
 
         match self.parser.parse_top_level_stmt()? {
             None => (),
@@ -68,28 +79,34 @@ impl<'src> Compiler<'src> {
         instructions.iter().for_each(|i| {
             f.instruction(i);
         });
+        instructions.push(Instruction::End);
 
         f
     }
 
     fn compile_let_decl(
         id: &'src str,
-        index: u32,
+        local_index: u32,
         expr: &Expression<'src>,
         instructions: &mut Vec<Instruction<'src>>,
     ) -> (u32, ValType) {
-        let local = (index, ValType::I64);
+        let local = (local_index, ValType::I64);
         log::debug!("{id} => {local:?}");
+        Self::compile_expr(expr, instructions);
+        instructions.push(Instruction::LocalSet(local_index));
 
+        local
+    }
+
+    fn compile_expr(expr: &Expression<'src>, instructions: &mut Vec<Instruction<'src>>) {
         match expr {
             Expression::Number(v) => {
                 instructions.push(Instruction::I64Const(*v));
-                instructions.push(Instruction::LocalSet(index));
             }
+            Expression::Grouping(expr) => Self::compile_expr(expr, instructions),
+            Expression::FnCall { id, params } => {}
             _ => unimplemented!(),
         };
-
-        local
     }
 }
 

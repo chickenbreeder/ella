@@ -35,7 +35,7 @@ fn eval_file(path: &Path) {
     log::debug!("Duration: {duration:.2?}");
 }
 
-fn compile_file(input: PathBuf, output: Option<PathBuf>, print_bytes: bool) {
+fn compile_file(input: PathBuf, output: Option<PathBuf>, print_bytes: bool, generate_wat: bool) {
     if !input.exists() {
         eprintln!("File {input:?} does not exist");
         process::exit(1);
@@ -66,9 +66,17 @@ fn compile_file(input: PathBuf, output: Option<PathBuf>, print_bytes: bool) {
         }
     };
 
-    let mut f =
-        File::create(&out_file).expect(&format!("Failed to create output file {out_file:?}"));
-    f.write_all(&bytes).expect("Failed to write to output file");
+    if generate_wat {
+        let wat = wasmprinter::print_bytes(&bytes).expect("Failed to print bytes as WAT");
+        let mut f =
+            File::create(&out_file).expect(&format!("Failed to create output file {out_file:?}"));
+        f.write_all(wat.as_bytes())
+            .expect("Failed to write to output file");
+    } else {
+        let mut f =
+            File::create(&out_file).expect(&format!("Failed to create output file {out_file:?}"));
+        f.write_all(&bytes).expect("Failed to write to output file");
+    }
 }
 
 fn main() {
@@ -82,7 +90,8 @@ fn main() {
             file,
             output,
             print_bytes,
-        } => compile_file(file, output, print_bytes),
+            wat,
+        } => compile_file(file, output, print_bytes, wat),
         Command::Eval { file } => eval_file(&file),
     }
 }
