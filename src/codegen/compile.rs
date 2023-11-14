@@ -102,6 +102,6 @@ mod test {
         let mut compiler = Compiler::from_src("fn foo() { let a = 42; let b = 18; }");
         let bytes = compiler.compile().unwrap();
 
-        println!("{bytes:?}");
+        println!("{bytes:X?}");
     }
 }

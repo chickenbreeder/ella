@@ -1,6 +1,17 @@
 # ella
 
-`RUST_LOG=debug cargo run -- test/func.ella`
+```
+Usage: ella <COMMAND>
+
+Commands:
+  compile  Compile a file to WASM
+  eval     Evaluate the generated AST
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help  Print help
+```
+<small>(Note: Compile only works for <u>test/simple.ella</u> right now)</small>
 
 ## Goals
 
@@ -12,7 +23,7 @@
 
 ## Things that are missing/broken
 
-* WASM codegen
+* Codegen for more complex programs
 * Branching
 * Scopes
 * And so much more :)
