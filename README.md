@@ -18,10 +18,7 @@ Options:
 ## Goals
 
 * Create a language that can be compiled to WASM without any additional tooling
-
-### Maybe?
-
-* Build a LSP server on top of this
+* Build a LSP server on top of this (maybe)
 
 ## Example
 
@@ -49,7 +46,7 @@ as the input program currently yields following result:
 )
 ```
 
-## Things that are missing/broken
+## Missing/broken
 
 * Codegen for more complex programs
 * Branching
