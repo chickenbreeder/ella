@@ -78,9 +78,9 @@ impl<'src> Interpreter<'src> {
 
     fn eval_stmt_in_env(&self, stmt: &Statement<'src>, env: &mut Environment<'src>) -> PResult<()> {
         match stmt {
-            Statement::LetDecl { id, value } => {
+            Statement::LetDecl { id, index, value } => {
                 let value = self.eval_expr_in_env(value, env)?;
-                log::debug!("DECL: {id} = {value:?}");
+                log::debug!("DECL[{index}]: {id} = {value:?}");
 
                 if env.contains_key(id) {
                     return Err(ErrorKind::RuntimeError(format!(

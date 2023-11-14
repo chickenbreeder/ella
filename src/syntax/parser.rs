@@ -50,7 +50,7 @@ impl<'src> Parser<'src> {
         }
     }
 
-    fn parse_stmt(&mut self) -> PResult<Option<Box<Statement<'src>>>> {
+    fn parse_stmt(&mut self, local_index: &mut u32) -> PResult<Option<Box<Statement<'src>>>> {
         match self.lexer.peek() {
             None => Ok(None),
             Some(Token::Kw(kw)) => {
@@ -64,7 +64,14 @@ impl<'src> Parser<'src> {
                         let expr = self.expect_expr()?;
                         self.expect(Token::Semicolon)?;
 
-                        Ok(Some(Box::new(Statement::LetDecl { id, value: expr })))
+                        let index = *local_index;
+                        *local_index += 1;
+
+                        Ok(Some(Box::new(Statement::LetDecl {
+                            id,
+                            index,
+                            value: expr,
+                        })))
                     }
                     Keyword::Return => {
                         let expr = self.expect_expr()?;
@@ -156,6 +163,8 @@ impl<'src> Parser<'src> {
 
     fn parse_block(&mut self) -> PResult<Box<Statement<'src>>> {
         let mut statements = vec![];
+        let mut local_index: u32 = 0;
+
         self.expect(Token::LCurly)?;
 
         loop {
@@ -164,7 +173,7 @@ impl<'src> Parser<'src> {
                 break;
             }
 
-            let stmt = match self.parse_stmt()? {
+            let stmt = match self.parse_stmt(&mut local_index)? {
                 Some(stmt) => stmt,
                 None => {
                     return Err(ErrorKind::ParseError(
@@ -254,9 +263,11 @@ mod test {
     #[test]
     fn parse_let_stmt() {
         let mut parser = Parser::new("let a = 42;");
-        let expr = parser.parse_stmt().unwrap().unwrap();
+        let mut index = 0;
+        let expr = parser.parse_stmt(&mut index).unwrap().unwrap();
         let expected = Box::new(Statement::LetDecl {
             id: "a",
+            index: 0,
             value: Box::new(Expression::Number(42)),
         });
 

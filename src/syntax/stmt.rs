@@ -22,6 +22,7 @@ pub(crate) struct FnDecl<'src> {
 pub(crate) enum Statement<'src> {
     LetDecl {
         id: &'src str,
+        index: u32,
         value: Box<Expression<'src>>,
     },
     Assignment {
