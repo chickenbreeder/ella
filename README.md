@@ -22,12 +22,11 @@ Options:
 
 ## Example
 
-Executing `cargo run -- compile test/simple.ella --wat` with
+Executing `cargo run -- compile test/add.ella --wat` with
 
 ```rust
-fn main() {
-    let a = 4;
-    let b = 42;
+fn add(a, b) {
+    return a + b;
 }
 ```
 
@@ -36,13 +35,13 @@ as the input program currently yields following result:
 ```wasm
 (module
   (func (;0;) (type 0)
-    (local i64)
-    i64.const 4
-    local.set 0
-    i64.const 42
-    local.set 1
+    local.get 0
+    local.get 1
+    i64.add
+    return
   )
-  (export "main" (func 0))
+  (export "add" (func 0))
+  (type (;0;) (func (param i64 i64) (result i64)))
 )
 ```
 

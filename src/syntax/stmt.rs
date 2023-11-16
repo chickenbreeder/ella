@@ -1,5 +1,7 @@
 use crate::{runtime::value::Value, syntax::expr::Expression};
 
+use super::{scope::ScopeEnv, LocalIndex};
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum FnType<'src> {
     ForeignFn {
@@ -22,19 +24,16 @@ pub(crate) struct FnDecl<'src> {
 pub(crate) enum Statement<'src> {
     LetDecl {
         id: &'src str,
-        index: u32,
+        index: LocalIndex,
         value: Box<Expression<'src>>,
     },
     Assignment {
         id: &'src str,
+        index: LocalIndex,
         value: Box<Expression<'src>>,
     },
     Return(Box<Expression<'src>>),
-    Block(Vec<Statement<'src>>),
+    Block(ScopeEnv<'src>, Vec<Statement<'src>>),
     FnDecl(FnDecl<'src>),
     FnCall(Box<Expression<'src>>),
-    If {
-        condition: Box<Expression<'src>>,
-        else_condition: Option<Box<Expression<'src>>>,
-    },
 }

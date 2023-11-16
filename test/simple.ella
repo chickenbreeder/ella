@@ -1,4 +1,5 @@
-fn main() {
+fn foo() {
     let a = 4;
-    let b = 42;
+    let b = a;
+    return b;
 }

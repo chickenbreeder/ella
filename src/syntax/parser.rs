@@ -7,7 +7,9 @@ use crate::{
         ExprParser, Expression,
     },
 };
-use std::iter::Peekable;
+use std::{collections::HashMap, iter::Peekable};
+
+use super::{scope::ScopeEnv, LocalIndex};
 
 pub(crate) struct Parser<'src> {
     pub(super) lexer: Peekable<Lexer<'src>>,
@@ -29,16 +31,25 @@ impl<'src> Parser<'src> {
                 let id = self.parse_id()?;
                 self.expect(Token::LParen)?;
                 let params = self.parse_fn_params()?;
+                let locals: HashMap<&'src str, LocalIndex> = params
+                    .iter()
+                    .enumerate()
+                    .map(|(i, p)| (*p, i as LocalIndex))
+                    .collect();
 
-                match *self.parse_block()? {
-                    Statement::Block(statements) => Ok(Some(Box::new(Statement::FnDecl(FnDecl {
-                        id,
-                        arity: params.len() as u8,
-                        ty: FnType::NativeFn {
-                            params,
-                            body: statements,
-                        },
-                    })))),
+                let env = ScopeEnv::with_locals(locals);
+
+                match *self.parse_scope(Some(env))? {
+                    Statement::Block(_, statements) => {
+                        Ok(Some(Box::new(Statement::FnDecl(FnDecl {
+                            id,
+                            arity: params.len() as u8,
+                            ty: FnType::NativeFn {
+                                params,
+                                body: statements,
+                            },
+                        }))))
+                    }
                     other => Err(ErrorKind::ParseError(format!(
                         "Expected a block statement, found {other:?}"
                     ))),
@@ -50,7 +61,7 @@ impl<'src> Parser<'src> {
         }
     }
 
-    fn parse_stmt(&mut self, local_index: &mut u32) -> PResult<Option<Box<Statement<'src>>>> {
+    fn parse_stmt(&mut self, env: &mut ScopeEnv<'src>) -> PResult<Option<Box<Statement<'src>>>> {
         match self.lexer.peek() {
             None => Ok(None),
             Some(Token::Kw(kw)) => {
@@ -61,11 +72,10 @@ impl<'src> Parser<'src> {
                     Keyword::Let => {
                         let id = self.parse_id()?;
                         self.expect(Token::Eq)?;
-                        let expr = self.expect_expr()?;
+                        let expr = self.expect_expr(env)?;
                         self.expect(Token::Semicolon)?;
 
-                        let index = *local_index;
-                        *local_index += 1;
+                        let index = env.add(id)?;
 
                         Ok(Some(Box::new(Statement::LetDecl {
                             id,
@@ -74,7 +84,7 @@ impl<'src> Parser<'src> {
                         })))
                     }
                     Keyword::Return => {
-                        let expr = self.expect_expr()?;
+                        let expr = self.expect_expr(env)?;
                         self.expect(Token::Semicolon)?;
 
                         Ok(Some(Box::new(Statement::Return(expr))))
@@ -90,18 +100,25 @@ impl<'src> Parser<'src> {
 
                 if let Some(Token::LParen) = self.lexer.peek() {
                     self.eat();
-                    let expr = self.parse_call_expr(id)?;
+                    let expr = self.parse_call_expr(env, id)?;
                     self.expect(Token::Semicolon)?;
                     return Ok(Some(Box::new(Statement::FnCall(expr))));
                 }
 
                 self.expect(Token::Eq)?;
-                let expr = self.expect_expr()?;
+                let expr = self.expect_expr(env)?;
                 self.expect(Token::Semicolon)?;
-                Ok(Some(Box::new(Statement::Assignment { id, value: expr })))
+
+                let index = env.get(id)?;
+
+                Ok(Some(Box::new(Statement::Assignment {
+                    id,
+                    index,
+                    value: expr,
+                })))
             }
             Some(Token::LCurly) => {
-                let stmt = self.parse_block()?;
+                let stmt = self.parse_scope(None)?;
                 Ok(Some(stmt))
             }
             other => Err(ErrorKind::ParseError(format!(
@@ -161,9 +178,16 @@ impl<'src> Parser<'src> {
         Ok(params)
     }
 
-    fn parse_block(&mut self) -> PResult<Box<Statement<'src>>> {
+    fn parse_scope(
+        &mut self,
+        parent_scope: Option<ScopeEnv<'src>>,
+    ) -> PResult<Box<Statement<'src>>> {
         let mut statements = vec![];
-        let mut local_index: u32 = 0;
+        let mut env = if let Some(parent_scope) = parent_scope {
+            parent_scope
+        } else {
+            ScopeEnv::new()
+        };
 
         self.expect(Token::LCurly)?;
 
@@ -173,7 +197,7 @@ impl<'src> Parser<'src> {
                 break;
             }
 
-            let stmt = match self.parse_stmt(&mut local_index)? {
+            let stmt = match self.parse_stmt(&mut env)? {
                 Some(stmt) => stmt,
                 None => {
                     return Err(ErrorKind::ParseError(
@@ -184,7 +208,7 @@ impl<'src> Parser<'src> {
             statements.push(*stmt);
         }
 
-        Ok(Box::new(Statement::Block(statements)))
+        Ok(Box::new(Statement::Block(env, statements)))
     }
 
     pub(super) fn parse_rep<T, F>(&mut self, mut producer: F) -> PResult<Vec<T>>
@@ -245,8 +269,11 @@ impl<'src> Parser<'src> {
         let _ = self.lexer.next();
     }
 
-    pub(super) fn expect_expr(&mut self) -> PResult<Box<Expression<'src>>> {
-        match self.parse_expr()? {
+    pub(super) fn expect_expr(
+        &mut self,
+        env: &mut ScopeEnv<'src>,
+    ) -> PResult<Box<Expression<'src>>> {
+        match self.parse_expr(env)? {
             Some(expr) => Ok(expr),
             None => Err(ErrorKind::ParseError(
                 "Expected expression, found EOF".into(),
@@ -258,13 +285,13 @@ impl<'src> Parser<'src> {
 #[cfg(test)]
 mod test {
     use super::Parser;
-    use crate::syntax::{expr::Expression, stmt::Statement};
+    use crate::syntax::{expr::Expression, scope::ScopeEnv, stmt::Statement};
 
     #[test]
     fn parse_let_stmt() {
         let mut parser = Parser::new("let a = 42;");
-        let mut index = 0;
-        let expr = parser.parse_stmt(&mut index).unwrap().unwrap();
+        let mut env = ScopeEnv::new();
+        let expr = parser.parse_stmt(&mut env).unwrap().unwrap();
         let expected = Box::new(Statement::LetDecl {
             id: "a",
             index: 0,

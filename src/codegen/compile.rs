@@ -1,12 +1,13 @@
 use wasm_encoder::{
-    CodeSection, ExportKind, ExportSection, Function, FunctionSection, Instruction, Module, ValType,
+    CodeSection, ExportKind, ExportSection, Function, FunctionSection, Instruction, Module,
+    TypeSection, ValType,
 };
 
 use crate::{
     error::{ErrorKind, PResult},
     syntax::{
         stmt::{FnType, Statement},
-        Expression, Parser,
+        Expression, LocalIndex, Operator, Parser,
     },
 };
 
@@ -24,6 +25,7 @@ impl<'src> Compiler<'src> {
     pub fn compile(&mut self) -> PResult<Vec<u8>> {
         let mut module = Module::new();
         let mut code = CodeSection::new();
+        let mut types = TypeSection::new();
 
         let mut functions = FunctionSection::new();
         let type_index = 0;
@@ -31,8 +33,6 @@ impl<'src> Compiler<'src> {
         module.section(&functions);
 
         let mut exports = ExportSection::new();
-        exports.export("main", ExportKind::Func, 0);
-        module.section(&exports);
 
         match self.parser.parse_top_level_stmt()? {
             None => (),
@@ -43,8 +43,12 @@ impl<'src> Compiler<'src> {
                             "Cannot compile a foreign function".into(),
                         ))
                     }
-                    FnType::NativeFn { params: _, body } => {
-                        let f = Self::compile_fn(&body);
+                    FnType::NativeFn { params, body } => {
+                        exports.export(decl.id, ExportKind::Func, 0);
+
+                        let mut instructions = vec![];
+                        Self::compile_fn_signature(&params, &mut types);
+                        let f = Self::compile_fn(&body, &mut instructions);
                         code.function(&f);
                     }
                 },
@@ -56,23 +60,21 @@ impl<'src> Compiler<'src> {
             },
         }
 
+        module.section(&exports);
+        module.section(&types);
         module.section(&code);
         Ok(module.finish())
     }
 
-    fn compile_fn(statements: &[Statement<'src>]) -> Function {
+    fn compile_fn(
+        statements: &[Statement<'src>],
+        instructions: &mut Vec<Instruction<'src>>,
+    ) -> Function {
         let mut locals = vec![];
-        let mut instructions = vec![];
 
-        for s in statements {
-            match s {
-                Statement::LetDecl { id, index, value } => {
-                    let local = Self::compile_let_decl(id, *index, value, &mut instructions);
-                    locals.push(local);
-                }
-                _ => (),
-            }
-        }
+        statements
+            .iter()
+            .for_each(|s| Self::compile_stmt(s, &mut locals, instructions));
 
         let mut f = Function::new(locals);
 
@@ -84,12 +86,44 @@ impl<'src> Compiler<'src> {
         f
     }
 
+    fn compile_fn_signature(params: &[&str], types: &mut TypeSection) {
+        let params: Vec<ValType> = params.iter().map(|_| ValType::I64).collect();
+
+        types.function(params, vec![ValType::I64]);
+    }
+
+    fn compile_stmt(
+        stmt: &Statement<'src>,
+        locals: &mut Vec<(LocalIndex, ValType)>,
+        instructions: &mut Vec<Instruction<'src>>,
+    ) {
+        match stmt {
+            Statement::LetDecl { id, index, value } => {
+                let local = Self::compile_let_decl(id, *index, &value, instructions);
+                locals.push(local);
+            }
+            Statement::Assignment {
+                id: _,
+                index,
+                value,
+            } => {
+                Self::compile_expr(&value, instructions);
+                instructions.push(Instruction::LocalSet(*index));
+            }
+            Statement::Return(expr) => {
+                Self::compile_expr(expr, instructions);
+                instructions.push(Instruction::Return);
+            }
+            other => unimplemented!("{other:?}"),
+        }
+    }
+
     fn compile_let_decl(
         id: &'src str,
-        local_index: u32,
+        local_index: LocalIndex,
         expr: &Expression<'src>,
         instructions: &mut Vec<Instruction<'src>>,
-    ) -> (u32, ValType) {
+    ) -> (LocalIndex, ValType) {
         let local = (local_index, ValType::I64);
         log::debug!("{id} => {local:?}");
         Self::compile_expr(expr, instructions);
@@ -104,8 +138,22 @@ impl<'src> Compiler<'src> {
                 instructions.push(Instruction::I64Const(*v));
             }
             Expression::Grouping(expr) => Self::compile_expr(expr, instructions),
-            Expression::FnCall { id, params } => {}
-            _ => unimplemented!(),
+            Expression::Unary(expr) => Self::compile_expr(expr, instructions), // TODO: Negate number
+            Expression::Ref { index, id: _ } => {
+                instructions.push(Instruction::LocalGet(*index));
+            }
+            Expression::Binary { lhs, op, rhs } => {
+                Self::compile_expr(lhs, instructions);
+                Self::compile_expr(rhs, instructions);
+
+                let ins = match op {
+                    Operator::Plus => Instruction::I64Add,
+                    Operator::Minus => Instruction::I64Sub,
+                    Operator::Mul => Instruction::I64Mul,
+                };
+                instructions.push(ins);
+            }
+            other => unimplemented!("{other:?}"),
         };
     }
 }

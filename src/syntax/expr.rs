@@ -1,4 +1,4 @@
-use super::token::Operator;
+use super::{token::Operator, LocalIndex};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum Expression<'src> {
@@ -10,7 +10,10 @@ pub(crate) enum Expression<'src> {
         op: Operator,
         rhs: Box<Expression<'src>>,
     },
-    VarRef(&'src str),
+    Ref {
+        index: LocalIndex,
+        id: &'src str,
+    },
     List(Vec<Expression<'src>>),
     ListAccess(&'src str, Box<Expression<'src>>),
     FnCall {

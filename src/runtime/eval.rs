@@ -4,6 +4,7 @@ use super::{builtin, env::Environment, value::Value};
 use crate::{
     error::{ErrorKind, PResult},
     syntax::{
+        scope::ScopeEnv,
         stmt::{FnDecl, FnType, Statement},
         ExprParser, Expression, Operator, Parser,
     },
@@ -55,8 +56,9 @@ impl<'src> Interpreter<'src> {
     pub fn eval_expr_str(&mut self, expr: &'static str) -> PResult<Option<Value>> {
         let mut parser = Parser::new(expr);
         let mut global_env = Environment::new();
+        let mut env = ScopeEnv::new();
 
-        match parser.parse_expr()? {
+        match parser.parse_expr(&mut env)? {
             Some(expr) => Ok(Some(self.eval_expr_in_env(&expr, &mut global_env)?)),
             None => Ok(None),
         }
@@ -90,7 +92,11 @@ impl<'src> Interpreter<'src> {
                     env.insert(id, value);
                 }
             }
-            Statement::Assignment { id, value } => {
+            Statement::Assignment {
+                id,
+                index: _,
+                value,
+            } => {
                 let value = self.eval_expr_in_env(value, env)?;
 
                 if let Some(v) = env.get_mut(id) {
@@ -118,7 +124,7 @@ impl<'src> Interpreter<'src> {
                     env.set_ret_val(v);
                 }
             }
-            Statement::Block(stmts) => {
+            Statement::Block(_, stmts) => {
                 let mut env = Environment::new();
 
                 for s in stmts.iter() {
@@ -162,7 +168,7 @@ impl<'src> Interpreter<'src> {
                     "Operator {op:?} requires two expressions that evaluate to a number"
                 )))
             }
-            Expression::VarRef(id) => {
+            Expression::Ref { index, id } => {
                 if let Some(value) = env.get(id) {
                     return Ok(value.clone());
                 }
