@@ -30,7 +30,7 @@ impl<'src> ScopeEnv<'src> {
     }
 
     pub fn add(&mut self, id: &'src str) -> PResult<LocalIndex> {
-        if let Some(_) = self.locals.get(id) {
+        if self.locals.get(id).is_some() {
             return Err(ErrorKind::ParseError(format!(
                 "{id} is already defined in current scope"
             )));

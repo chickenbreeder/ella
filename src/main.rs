@@ -65,20 +65,17 @@ fn compile_file(input: PathBuf, output: Option<PathBuf>, format: OutputFormat) -
 
     let mut out_file = match output {
         Some(p) => p,
-        None => {
-            let mut buf = input;
-            buf
-        }
+        None => input,
     };
 
     match format {
-        OutputFormat::WASM => {
+        OutputFormat::Wasm => {
             out_file.set_extension("wasm");
 
             let mut f = File::create(&out_file)?;
             f.write_all(&bytes)?;
         }
-        OutputFormat::WAT => {
+        OutputFormat::Wat => {
             out_file.set_extension("wat");
 
             let wat = wasmprinter::print_bytes(&bytes).expect("Failed to print bytes as WAT");

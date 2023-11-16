@@ -46,8 +46,8 @@ impl<'src> Compiler<'src> {
                         exports.export(decl.id, ExportKind::Func, 0);
 
                         let mut instructions = vec![];
-                        Self::compile_fn_signature(&params, &mut types);
-                        let locals = Self::compile_fn(&body, &mut instructions);
+                        Self::compile_fn_signature(params, &mut types);
+                        let locals = Self::compile_fn(body, &mut instructions);
                         let mut f = Function::new(locals);
 
                         instructions.iter().for_each(|ins| {
@@ -100,7 +100,7 @@ impl<'src> Compiler<'src> {
     ) {
         match stmt {
             Statement::LetDecl { id, index, value } => {
-                let local = Self::compile_let_decl(id, *index, &value, instructions);
+                let local = Self::compile_let_decl(id, *index, value, instructions);
                 locals.push(local);
             }
             Statement::Assignment {
@@ -108,7 +108,7 @@ impl<'src> Compiler<'src> {
                 index,
                 value,
             } => {
-                Self::compile_expr(&value, instructions);
+                Self::compile_expr(value, instructions);
                 instructions.push(Instruction::LocalSet(*index));
             }
             Statement::Return(expr) => {

@@ -7,8 +7,8 @@ pub(crate) struct Cli {
 
 #[derive(clap::ValueEnum, Clone, Debug)]
 pub(crate) enum OutputFormat {
-    WASM,
-    WAT,
+    Wasm,
+    Wat,
 }
 
 #[derive(clap::Subcommand, Debug)]
@@ -23,7 +23,7 @@ pub(crate) enum Command {
 
         /// Specifies the output format
         #[arg(short, long)]
-        #[clap(value_enum, default_value_t = OutputFormat::WASM)]
+        #[clap(value_enum, default_value_t = OutputFormat::Wasm)]
         format: OutputFormat,
     },
 
