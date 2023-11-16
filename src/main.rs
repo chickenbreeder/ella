@@ -82,19 +82,6 @@ fn compile_file(input: PathBuf, output: Option<PathBuf>, format: OutputFormat) -
     }
 
     Ok(())
-    /*
-    if generate_wat {
-        let wat = wasmprinter::print_bytes(&bytes).expect("Failed to print bytes as WAT");
-        let mut f =
-            File::create(&out_file).expect(&format!("Failed to create output file {out_file:?}"));
-        f.write_all(wat.as_bytes())
-            .expect("Failed to write to output file");
-    } else {
-        let mut f =
-            File::create(&out_file).expect(&format!("Failed to create output file {out_file:?}"));
-        f.write_all(&bytes).expect("Failed to write to output file");
-    }
-    */
 }
 
 fn main() -> io::Result<()> {
