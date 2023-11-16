@@ -108,7 +108,12 @@ impl<'src> Interpreter<'src> {
                 }
             }
             Statement::FnCall(expr) => {
-                if let Expression::FnCall { id, ref params } = **expr {
+                if let Expression::FnCall {
+                    id,
+                    index: _,
+                    ref params,
+                } = **expr
+                {
                     let args: Vec<Value> = params
                         .iter()
                         .map(|p| self.eval_expr_in_env(p, env).unwrap())
@@ -211,7 +216,11 @@ impl<'src> Interpreter<'src> {
                     "List index must evaluate to number".into(),
                 ))
             }
-            Expression::FnCall { id, params } => {
+            Expression::FnCall {
+                id,
+                index: _,
+                params,
+            } => {
                 let args: Vec<Value> = params
                     .iter()
                     .map(|p| self.eval_expr_in_env(p, env).unwrap())

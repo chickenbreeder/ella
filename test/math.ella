@@ -1,10 +1,14 @@
-fn add(a, b) {
-    let c = a + b;
-    return c;
-}
-
 fn id(n) {
     return n;
+}
+
+fn inc(n) {
+    return n + 1;
+}
+
+fn add(a, b) {
+    let c = inc(a) + id(b);
+    return c;
 }
 
 fn sub(a, b) {

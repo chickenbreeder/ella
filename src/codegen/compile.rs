@@ -7,7 +7,7 @@ use crate::{
     error::{ErrorKind, PResult},
     syntax::{
         stmt::{FnType, Statement},
-        Expression, LocalIndex, Operator, Parser,
+        Expression, FunctionIndex, LocalIndex, Operator, Parser,
     },
 };
 
@@ -89,7 +89,6 @@ impl<'src> Compiler<'src> {
             .for_each(|s| Self::compile_stmt(s, &mut locals, instructions));
 
         instructions.push(Instruction::End);
-
         locals
     }
 
@@ -160,8 +159,25 @@ impl<'src> Compiler<'src> {
                 };
                 instructions.push(ins);
             }
+            Expression::FnCall {
+                id: _,
+                index,
+                params,
+            } => Self::compile_call_expr(*index, params, instructions),
             other => unimplemented!("{other:?}"),
         };
+    }
+
+    fn compile_call_expr(
+        index: FunctionIndex,
+        params: &[Expression<'src>],
+        instructions: &mut Vec<Instruction<'src>>,
+    ) {
+        for expr in params {
+            Self::compile_expr(expr, instructions);
+        }
+
+        instructions.push(Instruction::Call(index));
     }
 }
 

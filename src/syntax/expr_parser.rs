@@ -122,6 +122,15 @@ impl<'src> ExprParser<'src> for Parser<'src> {
         env: &mut ScopeEnv<'src>,
         id: &'src str,
     ) -> PResult<Box<Expression<'src>>> {
+        let index = match self.functions.get(id) {
+            Some(index) => *index,
+            None => {
+                return Err(ErrorKind::ParseError(format!(
+                    "Undefined function `{id}` (!)"
+                )))
+            }
+        };
+
         let mut args = vec![];
 
         match self.lexer.peek() {
@@ -153,7 +162,11 @@ impl<'src> ExprParser<'src> for Parser<'src> {
             }
         }
         self.eat();
-        Ok(Box::new(Expression::FnCall { id, params: args }))
+        Ok(Box::new(Expression::FnCall {
+            id,
+            index,
+            params: args,
+        }))
     }
 
     fn parse_list_expr(&mut self, env: &mut ScopeEnv<'src>) -> PResult<Box<Expression<'src>>> {

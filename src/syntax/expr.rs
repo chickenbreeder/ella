@@ -1,4 +1,4 @@
-use super::{token::Operator, LocalIndex};
+use super::{token::Operator, FunctionIndex, LocalIndex};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum Expression<'src> {
@@ -18,6 +18,7 @@ pub(crate) enum Expression<'src> {
     ListAccess(&'src str, Box<Expression<'src>>),
     FnCall {
         id: &'src str,
+        index: FunctionIndex,
         params: Vec<Expression<'src>>,
     },
     Boolean(bool),

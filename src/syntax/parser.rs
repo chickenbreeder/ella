@@ -13,6 +13,7 @@ use super::{scope::ScopeEnv, FunctionIndex, LocalIndex};
 
 pub(crate) struct Parser<'src> {
     pub(super) lexer: Peekable<Lexer<'src>>,
+    pub(super) functions: HashMap<&'src str, FunctionIndex>,
     fn_index: FunctionIndex,
 }
 
@@ -20,6 +21,7 @@ impl<'src> Parser<'src> {
     pub fn new(src: &'src str) -> Self {
         Self {
             lexer: Lexer::new(src).peekable(),
+            functions: HashMap::new(),
             fn_index: 0,
         }
     }
@@ -45,6 +47,8 @@ impl<'src> Parser<'src> {
                     Statement::Block(_, statements) => {
                         let index = self.fn_index;
                         self.fn_index += 1;
+
+                        self.functions.insert(id, index);
 
                         Ok(Some(Box::new(Statement::FnDecl(FnDecl {
                             id,
