@@ -13,6 +13,7 @@ use std::{
 };
 
 use cli::OutputFormat;
+use error::ErrorKind;
 use runtime::eval::Interpreter;
 
 use crate::{cli::Command, codegen::compile::Compiler};
@@ -50,10 +51,16 @@ fn compile_file(input: PathBuf, output: Option<PathBuf>, format: OutputFormat) -
 
     let bytes = match compiler.compile() {
         Ok(bytes) => bytes,
-        Err(why) => {
-            eprintln!("Failed to compile file: {why:?}");
-            process::exit(1);
-        }
+        Err(err) => match err {
+            ErrorKind::ParseError(why) => {
+                eprintln!("error on line ?: {why}");
+                process::exit(1);
+            }
+            other => {
+                eprintln!("{other:?}");
+                process::exit(1);
+            }
+        },
     };
 
     let mut out_file = match output {
