@@ -1,6 +1,6 @@
 use crate::{runtime::value::Value, syntax::expr::Expression};
 
-use super::{scope::ScopeEnv, LocalIndex};
+use super::{scope::ScopeEnv, FunctionIndex, LocalIndex};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum FnType<'src> {
@@ -8,6 +8,7 @@ pub(crate) enum FnType<'src> {
         func: fn(Value) -> Value,
     },
     NativeFn {
+        index: FunctionIndex,
         params: Vec<&'src str>,
         body: Vec<Statement<'src>>,
     },

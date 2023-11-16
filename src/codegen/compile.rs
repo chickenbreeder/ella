@@ -26,44 +26,48 @@ impl<'src> Compiler<'src> {
         let mut module = Module::new();
         let mut code = CodeSection::new();
         let mut types = TypeSection::new();
-
         let mut functions = FunctionSection::new();
-        let type_index = 0;
-        functions.function(type_index);
-
         let mut exports = ExportSection::new();
 
-        match self.parser.parse_top_level_stmt()? {
-            None => (),
-            Some(stmt) => match *stmt {
-                Statement::FnDecl(decl) => match &decl.ty {
-                    FnType::ForeignFn { func } => {
-                        return Err(ErrorKind::ParseError(
-                            "Cannot compile a foreign function".into(),
-                        ))
-                    }
-                    FnType::NativeFn { params, body } => {
-                        exports.export(decl.id, ExportKind::Func, 0);
+        loop {
+            match self.parser.parse_top_level_stmt()? {
+                None => break,
+                Some(stmt) => match *stmt {
+                    Statement::FnDecl(decl) => match &decl.ty {
+                        FnType::ForeignFn { func: _ } => {
+                            return Err(ErrorKind::ParseError(
+                                "Cannot compile a foreign function".into(),
+                            ))
+                        }
+                        FnType::NativeFn {
+                            index,
+                            params,
+                            body,
+                        } => {
+                            exports.export(decl.id, ExportKind::Func, *index);
+                            functions.function(*index);
 
-                        let mut instructions = vec![];
-                        Self::compile_fn_signature(params, &mut types);
-                        let locals = Self::compile_fn(body, &mut instructions);
-                        let mut f = Function::new(locals);
+                            let mut instructions = vec![];
+                            Self::compile_fn_signature(params, &mut types);
+                            let locals = Self::compile_fn(body, &mut instructions);
+                            let mut f = Function::new(locals);
 
-                        instructions.iter().for_each(|ins| {
-                            f.instruction(ins);
-                        });
+                            instructions.iter().for_each(|ins| {
+                                f.instruction(ins);
+                            });
 
-                        code.function(&f);
+                            code.function(&f);
+                        }
+                    },
+                    other => {
+                        return Err(ErrorKind::ParseError(format!(
+                            "Expected function, found {other:?}"
+                        )))
                     }
                 },
-                other => {
-                    return Err(ErrorKind::ParseError(format!(
-                        "Expected function, found {other:?}"
-                    )))
-                }
-            },
+            }
         }
+
         module.section(&types);
         module.section(&functions);
         module.section(&exports);

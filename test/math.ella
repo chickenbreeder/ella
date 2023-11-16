@@ -1,0 +1,12 @@
+fn add(a, b) {
+    let c = a + b;
+    return c;
+}
+
+fn id(n) {
+    return n;
+}
+
+fn sub(a, b) {
+    return a - b;
+}

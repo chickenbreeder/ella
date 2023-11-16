@@ -14,6 +14,7 @@ use crate::error::PResult;
 
 use self::{scope::ScopeEnv, token::Precedence};
 
+pub(crate) type FunctionIndex = u32;
 pub(crate) type LocalIndex = u32;
 
 pub(crate) trait ExprParser<'src> {

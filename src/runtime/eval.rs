@@ -243,7 +243,11 @@ impl<'src> Interpreter<'src> {
 
         match &decl.ty {
             FnType::ForeignFn { func } => Ok(func(args[0].clone())),
-            FnType::NativeFn { params, body } => {
+            FnType::NativeFn {
+                index: _,
+                params,
+                body,
+            } => {
                 let statements = &body[..];
 
                 for i in 0..decl.arity as usize {

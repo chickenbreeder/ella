@@ -9,16 +9,18 @@ use crate::{
 };
 use std::{collections::HashMap, iter::Peekable};
 
-use super::{scope::ScopeEnv, LocalIndex};
+use super::{scope::ScopeEnv, FunctionIndex, LocalIndex};
 
 pub(crate) struct Parser<'src> {
     pub(super) lexer: Peekable<Lexer<'src>>,
+    fn_index: FunctionIndex,
 }
 
 impl<'src> Parser<'src> {
     pub fn new(src: &'src str) -> Self {
         Self {
             lexer: Lexer::new(src).peekable(),
+            fn_index: 0,
         }
     }
 
@@ -41,10 +43,14 @@ impl<'src> Parser<'src> {
 
                 match *self.parse_scope(Some(env))? {
                     Statement::Block(_, statements) => {
+                        let index = self.fn_index;
+                        self.fn_index += 1;
+
                         Ok(Some(Box::new(Statement::FnDecl(FnDecl {
                             id,
                             arity: params.len() as u8,
                             ty: FnType::NativeFn {
+                                index,
                                 params,
                                 body: statements,
                             },
