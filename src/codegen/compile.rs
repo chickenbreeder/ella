@@ -44,8 +44,10 @@ impl<'src> Compiler<'src> {
                             params,
                             body,
                         } => {
-                            exports.export(decl.id, ExportKind::Func, *index);
-                            functions.function(*index);
+                            let index = *index;
+
+                            exports.export(decl.id, ExportKind::Func, index);
+                            functions.function(index);
 
                             let mut instructions = vec![];
                             Self::compile_fn_signature(params, &mut types);
