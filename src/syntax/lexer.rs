@@ -22,6 +22,8 @@ impl<'src> Iterator for Lexer<'src> {
             Some((_, '}')) => Some(Token::RCurly),
             Some((_, '[')) => Some(Token::LBracket),
             Some((_, ']')) => Some(Token::RBracket),
+            Some((_, '<')) => Some(Token::Op(Operator::Lt)),
+            Some((_, '>')) => Some(Token::Op(Operator::Gt)),
             Some((_, '=')) => Some(Token::Eq),
             Some((_, ',')) => Some(Token::Comma),
             Some((_, ';')) => Some(Token::Semicolon),

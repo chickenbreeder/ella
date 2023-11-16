@@ -156,6 +156,8 @@ impl<'src> Compiler<'src> {
                     Operator::Plus => Instruction::I32Add,
                     Operator::Minus => Instruction::I32Sub,
                     Operator::Mul => Instruction::I32Mul,
+                    Operator::Lt => Instruction::I32LtS,
+                    Operator::Gt => Instruction::I32GtS,
                 };
                 instructions.push(ins);
             }

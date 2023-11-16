@@ -162,6 +162,8 @@ impl<'src> Interpreter<'src> {
 
                 if let (Value::Number(lhs), Value::Number(rhs)) = (lhs, rhs) {
                     let value = match op {
+                        Operator::Lt => return Ok(Value::Boolean(lhs < rhs)),
+                        Operator::Gt => return Ok(Value::Boolean(lhs > rhs)),
                         Operator::Plus => lhs + rhs,
                         Operator::Minus => lhs - rhs,
                         Operator::Mul => lhs * rhs,
@@ -173,7 +175,7 @@ impl<'src> Interpreter<'src> {
                     "Operator {op:?} requires two expressions that evaluate to a number"
                 )))
             }
-            Expression::Ref { index, id } => {
+            Expression::Ref { index: _, id } => {
                 if let Some(value) = env.get(id) {
                     return Ok(value.clone());
                 }

@@ -3,6 +3,9 @@ pub(crate) enum Operator {
     Plus,
     Minus,
     Mul,
+
+    Lt,
+    Gt,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -15,6 +18,7 @@ pub(crate) type Precedence = u8;
 impl Operator {
     pub fn precedence(self) -> Precedence {
         match self {
+            Self::Lt | Self::Gt => 5,
             Self::Plus | Self::Minus => 10,
             Self::Mul => 20,
         }
@@ -22,6 +26,7 @@ impl Operator {
 
     pub fn assoc(self) -> Assoc {
         match self {
+            Self::Lt | Self::Gt => Assoc::Left,
             Self::Plus | Self::Minus | Self::Mul => Assoc::Left,
         }
     }
