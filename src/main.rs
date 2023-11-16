@@ -6,23 +6,24 @@ mod syntax;
 
 use std::{
     fs::File,
-    io::Write,
+    io::{self, Write},
     path::{Path, PathBuf},
     process,
     time::Instant,
 };
 
+use cli::OutputFormat;
 use runtime::eval::Interpreter;
 
 use crate::{cli::Command, codegen::compile::Compiler};
 
-fn eval_file(path: &Path) {
+fn eval_file(path: &Path) -> io::Result<()> {
     if !path.exists() {
         eprintln!("File {path:?} does not exist");
         process::exit(1);
     }
 
-    let src = std::fs::read_to_string(path).expect("Failed to read file");
+    let src = std::fs::read_to_string(path)?;
 
     let now = Instant::now();
     let mut interpreter = Interpreter::new();
@@ -33,9 +34,11 @@ fn eval_file(path: &Path) {
 
     let duration = now.elapsed();
     log::debug!("Duration: {duration:.2?}");
+
+    Ok(())
 }
 
-fn compile_file(input: PathBuf, output: Option<PathBuf>, print_bytes: bool, generate_wat: bool) {
+fn compile_file(input: PathBuf, output: Option<PathBuf>, format: OutputFormat) -> io::Result<()> {
     if !input.exists() {
         eprintln!("File {input:?} does not exist");
         process::exit(1);
@@ -53,19 +56,33 @@ fn compile_file(input: PathBuf, output: Option<PathBuf>, print_bytes: bool, gene
         }
     };
 
-    if print_bytes {
-        println!("{bytes:X?}");
-    }
-
-    let out_file = match output {
+    let mut out_file = match output {
         Some(p) => p,
         None => {
             let mut buf = input;
-            buf.set_extension("wasm");
             buf
         }
     };
 
+    match format {
+        OutputFormat::WASM => {
+            out_file.set_extension("wasm");
+
+            let mut f = File::create(&out_file)?;
+            f.write_all(&bytes)?;
+        }
+        OutputFormat::WAT => {
+            out_file.set_extension("wat");
+
+            let wat = wasmprinter::print_bytes(&bytes).expect("Failed to print bytes as WAT");
+
+            let mut f = File::create(&out_file)?;
+            f.write_all(wat.as_bytes())?;
+        }
+    }
+
+    Ok(())
+    /*
     if generate_wat {
         let wat = wasmprinter::print_bytes(&bytes).expect("Failed to print bytes as WAT");
         let mut f =
@@ -77,9 +94,10 @@ fn compile_file(input: PathBuf, output: Option<PathBuf>, print_bytes: bool, gene
             File::create(&out_file).expect(&format!("Failed to create output file {out_file:?}"));
         f.write_all(&bytes).expect("Failed to write to output file");
     }
+    */
 }
 
-fn main() {
+fn main() -> io::Result<()> {
     use clap::Parser;
 
     env_logger::init();
@@ -89,9 +107,8 @@ fn main() {
         Command::Compile {
             file,
             output,
-            print_bytes,
-            wat,
-        } => compile_file(file, output, print_bytes, wat),
+            format,
+        } => compile_file(file, output, format),
         Command::Eval { file } => eval_file(&file),
     }
 }

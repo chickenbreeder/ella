@@ -22,7 +22,7 @@ Options:
 
 ## Example
 
-Executing `cargo run -- compile test/add.ella --wat` with
+Executing `cargo run -- compile test/add.ella -f wat` with
 
 ```rust
 fn add(a, b) {

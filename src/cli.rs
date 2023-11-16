@@ -5,6 +5,12 @@ pub(crate) struct Cli {
     pub command: Command,
 }
 
+#[derive(clap::ValueEnum, Clone, Debug)]
+pub(crate) enum OutputFormat {
+    WASM,
+    WAT,
+}
+
 #[derive(clap::Subcommand, Debug)]
 pub(crate) enum Command {
     /// Compile a file to WASM
@@ -15,13 +21,10 @@ pub(crate) enum Command {
         #[arg(short, long)]
         output: Option<std::path::PathBuf>,
 
-        /// Print the generated WASM to stdout
-        #[arg(long, action=clap::ArgAction::SetTrue)]
-        print_bytes: bool,
-
-        /// Generate WAT (WebAssembly Text Format) instead of binary
-        #[arg(long, action=clap::ArgAction::SetTrue)]
-        wat: bool,
+        /// Specifies the output format
+        #[arg(short, long)]
+        #[clap(value_enum, default_value_t = OutputFormat::WASM)]
+        format: OutputFormat,
     },
 
     /// Evaluate the generated AST
