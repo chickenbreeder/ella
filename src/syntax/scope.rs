@@ -19,7 +19,10 @@ impl<'src> ScopeEnv<'src> {
     }
 
     pub fn with_locals(locals: HashMap<&'src str, LocalIndex>) -> Self {
-        Self { offset: 0, locals }
+        Self {
+            offset: locals.len() as u32,
+            locals,
+        }
     }
 
     pub fn new() -> Self {
