@@ -34,14 +34,13 @@ as the input program currently yields following result:
 
 ```wasm
 (module
-  (func (;0;) (type 0)
+  (type (;0;) (func (param i32 i32) (result i32)))
+  (func (;0;) (type 0) (param i32 i32) (result i32)
     local.get 0
     local.get 1
-    i64.add
-    return
+    i32.add
   )
   (export "add" (func 0))
-  (type (;0;) (func (param i64 i64) (result i64)))
 )
 ```
 

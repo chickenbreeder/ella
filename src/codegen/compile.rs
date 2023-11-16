@@ -30,7 +30,6 @@ impl<'src> Compiler<'src> {
         let mut functions = FunctionSection::new();
         let type_index = 0;
         functions.function(type_index);
-        module.section(&functions);
 
         let mut exports = ExportSection::new();
 
@@ -48,7 +47,13 @@ impl<'src> Compiler<'src> {
 
                         let mut instructions = vec![];
                         Self::compile_fn_signature(&params, &mut types);
-                        let f = Self::compile_fn(&body, &mut instructions);
+                        let locals = Self::compile_fn(&body, &mut instructions);
+                        let mut f = Function::new(locals);
+
+                        instructions.iter().for_each(|ins| {
+                            f.instruction(ins);
+                        });
+
                         code.function(&f);
                     }
                 },
@@ -59,37 +64,33 @@ impl<'src> Compiler<'src> {
                 }
             },
         }
-
-        module.section(&exports);
         module.section(&types);
+        module.section(&functions);
+        module.section(&exports);
         module.section(&code);
+
         Ok(module.finish())
     }
 
     fn compile_fn(
         statements: &[Statement<'src>],
         instructions: &mut Vec<Instruction<'src>>,
-    ) -> Function {
+    ) -> Vec<(LocalIndex, ValType)> {
         let mut locals = vec![];
 
         statements
             .iter()
             .for_each(|s| Self::compile_stmt(s, &mut locals, instructions));
 
-        let mut f = Function::new(locals);
-
-        instructions.iter().for_each(|i| {
-            f.instruction(i);
-        });
         instructions.push(Instruction::End);
 
-        f
+        locals
     }
 
     fn compile_fn_signature(params: &[&str], types: &mut TypeSection) {
-        let params: Vec<ValType> = params.iter().map(|_| ValType::I64).collect();
+        let params: Vec<ValType> = params.iter().map(|_| ValType::I32).collect();
 
-        types.function(params, vec![ValType::I64]);
+        types.function(params, vec![ValType::I32]);
     }
 
     fn compile_stmt(
@@ -112,7 +113,7 @@ impl<'src> Compiler<'src> {
             }
             Statement::Return(expr) => {
                 Self::compile_expr(expr, instructions);
-                instructions.push(Instruction::Return);
+                // ? instructions.push(Instruction::Return);
             }
             other => unimplemented!("{other:?}"),
         }
@@ -124,7 +125,7 @@ impl<'src> Compiler<'src> {
         expr: &Expression<'src>,
         instructions: &mut Vec<Instruction<'src>>,
     ) -> (LocalIndex, ValType) {
-        let local = (local_index, ValType::I64);
+        let local = (local_index, ValType::I32);
         log::debug!("{id} => {local:?}");
         Self::compile_expr(expr, instructions);
         instructions.push(Instruction::LocalSet(local_index));
@@ -135,7 +136,7 @@ impl<'src> Compiler<'src> {
     fn compile_expr(expr: &Expression<'src>, instructions: &mut Vec<Instruction<'src>>) {
         match expr {
             Expression::Number(v) => {
-                instructions.push(Instruction::I64Const(*v));
+                instructions.push(Instruction::I32Const(*v as i32));
             }
             Expression::Grouping(expr) => Self::compile_expr(expr, instructions),
             Expression::Unary(expr) => Self::compile_expr(expr, instructions), // TODO: Negate number
@@ -147,9 +148,9 @@ impl<'src> Compiler<'src> {
                 Self::compile_expr(rhs, instructions);
 
                 let ins = match op {
-                    Operator::Plus => Instruction::I64Add,
-                    Operator::Minus => Instruction::I64Sub,
-                    Operator::Mul => Instruction::I64Mul,
+                    Operator::Plus => Instruction::I32Add,
+                    Operator::Minus => Instruction::I32Sub,
+                    Operator::Mul => Instruction::I32Mul,
                 };
                 instructions.push(ins);
             }
