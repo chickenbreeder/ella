@@ -7,7 +7,7 @@ use crate::{
         ExprParser, Expression,
     },
 };
-use std::{borrow::Cow, collections::HashMap, iter::Peekable};
+use std::{collections::HashMap, iter::Peekable};
 
 use super::{
     scope::ScopeEnv,
