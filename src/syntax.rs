@@ -8,7 +8,7 @@ mod token;
 
 pub(crate) use expr::Expression;
 pub(crate) use parser::Parser;
-pub(crate) use token::Operator;
+pub(crate) use token::{Operator, Type};
 
 use crate::error::PResult;
 

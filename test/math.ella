@@ -1,16 +1,16 @@
-fn id(n) {
+fn id(n: i32) {
     return n < 9;
 }
 
-fn inc(n) {
+fn inc(n: i32) {
     return n + 1;
 }
 
-fn add(a, b) {
+fn add(a: i32, b: i32) {
     let c = inc(a) + id(b);
     return c;
 }
 
-fn sub(a, b) {
+fn sub(a: i32, b: i32) {
     return a - b;
 }

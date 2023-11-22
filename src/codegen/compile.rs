@@ -6,8 +6,8 @@ use wasm_encoder::{
 use crate::{
     error::{ErrorKind, PResult},
     syntax::{
-        stmt::{FnType, Statement},
-        Expression, FunctionIndex, LocalIndex, Operator, Parser,
+        stmt::{FnType, Statement, TypedId},
+        Expression, FunctionIndex, LocalIndex, Operator, Parser, Type,
     },
 };
 
@@ -22,51 +22,49 @@ impl<'src> Compiler<'src> {
         }
     }
 
-    pub fn compile(&mut self) -> PResult<Vec<u8>> {
+    pub fn compile_to_module(&mut self) -> PResult<Module> {
         let mut module = Module::new();
         let mut code = CodeSection::new();
         let mut types = TypeSection::new();
         let mut functions = FunctionSection::new();
         let mut exports = ExportSection::new();
 
-        loop {
-            match self.parser.parse_top_level_stmt()? {
-                None => break,
-                Some(stmt) => match *stmt {
-                    Statement::FnDecl(decl) => match &decl.ty {
-                        FnType::ForeignFn { func: _ } => {
-                            return Err(ErrorKind::ParseError(
-                                "Cannot compile a foreign function".into(),
-                            ))
-                        }
-                        FnType::NativeFn {
-                            index,
-                            params,
-                            body,
-                        } => {
-                            let index = *index;
+        while let Some(stmt) = self.parser.parse_top_level_stmt()? {
+            match *stmt {
+                Statement::FnDecl(decl) => match &decl.ty {
+                    FnType::ForeignFn { func: _ } => {
+                        return Err(ErrorKind::ParseError(
+                            "Cannot compile a foreign function".into(),
+                        ))
+                    }
+                    FnType::NativeFn {
+                        index,
+                        ty,
+                        params,
+                        body,
+                    } => {
+                        let index = *index;
 
-                            exports.export(decl.id, ExportKind::Func, index);
-                            functions.function(index);
+                        exports.export(decl.id, ExportKind::Func, index);
+                        functions.function(index);
 
-                            let mut instructions = vec![];
-                            Self::compile_fn_signature(params, &mut types);
-                            let locals = Self::compile_fn(body, &mut instructions);
-                            let mut f = Function::new(locals);
+                        let mut instructions = vec![];
+                        Self::compile_fn_signature(params, *ty, &mut types);
+                        let locals = Self::compile_fn(body, &mut instructions);
+                        let mut f = Function::new(locals);
 
-                            instructions.iter().for_each(|ins| {
-                                f.instruction(ins);
-                            });
+                        instructions.iter().for_each(|ins| {
+                            f.instruction(ins);
+                        });
 
-                            code.function(&f);
-                        }
-                    },
-                    other => {
-                        return Err(ErrorKind::ParseError(format!(
-                            "Expected function, found {other:?}"
-                        )))
+                        code.function(&f);
                     }
                 },
+                other => {
+                    return Err(ErrorKind::ParseError(format!(
+                        "Expected function, found {other:?}"
+                    )))
+                }
             }
         }
 
@@ -75,6 +73,11 @@ impl<'src> Compiler<'src> {
         module.section(&exports);
         module.section(&code);
 
+        Ok(module)
+    }
+
+    pub fn compile(&mut self) -> PResult<Vec<u8>> {
+        let module = self.compile_to_module()?;
         Ok(module.finish())
     }
 
@@ -92,10 +95,14 @@ impl<'src> Compiler<'src> {
         locals
     }
 
-    fn compile_fn_signature(params: &[&str], types: &mut TypeSection) {
+    fn compile_fn_signature(params: &[TypedId<'src>], ty: Type, types: &mut TypeSection) {
+        let results = match ty.into() {
+            Some(ty) => vec![ty],
+            None => vec![],
+        };
         let params: Vec<ValType> = params.iter().map(|_| ValType::I32).collect();
 
-        types.function(params, vec![ValType::I32]);
+        types.function(params, results);
     }
 
     fn compile_stmt(
@@ -161,7 +168,7 @@ impl<'src> Compiler<'src> {
                 };
                 instructions.push(ins);
             }
-            Expression::FnCall {
+            Expression::Call {
                 id: _,
                 index,
                 params,
@@ -189,9 +196,12 @@ mod test {
 
     #[test]
     fn simple() {
-        let mut compiler = Compiler::from_src("fn foo() { let a = 42; let b = 18; }");
+        let mut compiler = Compiler::from_src("fn foo(): void {}");
         let bytes = compiler.compile().unwrap();
 
-        println!("{bytes:X?}");
+        assert_eq!(0x00, bytes[0]);
+        assert_eq!(0x61, bytes[1]);
+        assert_eq!(0x73, bytes[2]);
+        assert_eq!(0x6D, bytes[3]);
     }
 }

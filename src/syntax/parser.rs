@@ -9,7 +9,7 @@ use crate::{
 };
 use std::{collections::HashMap, iter::Peekable};
 
-use super::{scope::ScopeEnv, FunctionIndex, LocalIndex};
+use super::{scope::ScopeEnv, stmt::TypedId, token::Type, FunctionIndex, LocalIndex};
 
 pub(crate) struct Parser<'src> {
     pub(super) lexer: Peekable<Lexer<'src>>,
@@ -38,9 +38,10 @@ impl<'src> Parser<'src> {
                 let locals: HashMap<&'src str, LocalIndex> = params
                     .iter()
                     .enumerate()
-                    .map(|(i, p)| (*p, i as LocalIndex))
+                    .map(|(i, p)| (p.id, i as LocalIndex))
                     .collect();
 
+                let ty = self.parse_ty()?;
                 let env = ScopeEnv::with_locals(locals);
 
                 match *self.parse_scope(Some(env))? {
@@ -55,6 +56,7 @@ impl<'src> Parser<'src> {
                             arity: params.len() as u8,
                             ty: FnType::NativeFn {
                                 index,
+                                ty,
                                 params,
                                 body: statements,
                             },
@@ -147,44 +149,37 @@ impl<'src> Parser<'src> {
         }
     }
 
+    fn parse_ty(&mut self) -> PResult<Type> {
+        self.expect(Token::Colon)?;
+        match self.lexer.next() {
+            None => Err(ErrorKind::ParseError("Expected type, found EOF".into())),
+            Some(Token::Ty(ty)) => Ok(ty),
+            other => Err(ErrorKind::ParseError(format!(
+                "Expected type, found {other:?}"
+            ))),
+        }
+    }
+
+    fn parse_typed_id(&mut self) -> PResult<TypedId<'src>> {
+        let id = self.parse_id()?;
+        let ty = self.parse_ty()?;
+
+        if ty == Type::Void {
+            return Err(ErrorKind::ParseError(
+                "Parameters cannot be of type void".into(),
+            ));
+        }
+
+        Ok(TypedId { id, ty })
+    }
+
     #[inline(always)]
     pub(super) fn bump(&mut self) {
         let _ = self.lexer.next();
     }
 
-    // TODO: Refactor this and parse_call_expr to get rid of duplicated code
-    fn parse_fn_params(&mut self) -> PResult<Vec<&'src str>> {
-        let mut params = vec![];
-
-        match self.lexer.peek() {
-            Some(Token::RParen) => (),
-            _ => {
-                let param = self.parse_id()?;
-                params.push(param);
-
-                loop {
-                    match self.lexer.peek() {
-                        None => {
-                            return Err(ErrorKind::ParseError(
-                                "Expected `,` or `)`, found EOF".into(),
-                            ))
-                        }
-                        Some(Token::RParen) => break,
-                        Some(Token::Comma) => {
-                            self.eat();
-                            let param = self.parse_id()?;
-                            params.push(param);
-                        }
-                        other => {
-                            return Err(ErrorKind::ParseError(format!(
-                                "Expected `,` or `)`, found {other:?}"
-                            )))
-                        }
-                    }
-                }
-            }
-        }
-        self.eat();
+    fn parse_fn_params(&mut self) -> PResult<Vec<TypedId<'src>>> {
+        let params = self.parse_rep(|p| p.parse_typed_id())?;
         Ok(params)
     }
 
@@ -223,14 +218,14 @@ impl<'src> Parser<'src> {
 
     pub(super) fn parse_rep<T, F>(&mut self, mut producer: F) -> PResult<Vec<T>>
     where
-        F: FnMut() -> PResult<T>,
+        F: FnMut(&mut Self) -> PResult<T>,
     {
         let mut result = vec![];
 
         match self.lexer.peek() {
             Some(Token::RParen) => (),
             _ => {
-                let param = producer()?; //self.parse_id()?;
+                let param = producer(self)?;
                 result.push(param);
 
                 loop {
@@ -243,7 +238,7 @@ impl<'src> Parser<'src> {
                         Some(Token::RParen) => break,
                         Some(Token::Comma) => {
                             self.eat();
-                            let param = producer()?;
+                            let param = producer(self)?;
                             result.push(param);
                         }
                         other => {
@@ -295,7 +290,12 @@ impl<'src> Parser<'src> {
 #[cfg(test)]
 mod test {
     use super::Parser;
-    use crate::syntax::{expr::Expression, scope::ScopeEnv, stmt::Statement};
+    use crate::syntax::{
+        expr::Expression,
+        scope::ScopeEnv,
+        stmt::{FnDecl, Statement, TypedId},
+        token::Type,
+    };
 
     #[test]
     fn parse_let_stmt() {
@@ -307,6 +307,37 @@ mod test {
             index: 0,
             value: Box::new(Expression::Number(42)),
         });
+
+        assert_eq!(expr, expected);
+    }
+
+    #[test]
+    fn parse_fn() {
+        let mut parser = Parser::new("fn add(a: i32, b: i64): i32 { return a + b; }");
+        let expr = parser.parse_top_level_stmt().unwrap().unwrap();
+        let expected = Box::new(Statement::FnDecl(FnDecl {
+            id: "add",
+            arity: 2,
+            ty: crate::syntax::stmt::FnType::NativeFn {
+                index: 0,
+                ty: Type::I32,
+                params: vec![
+                    TypedId {
+                        id: "a",
+                        ty: Type::I32,
+                    },
+                    TypedId {
+                        id: "b",
+                        ty: Type::I64,
+                    },
+                ],
+                body: vec![Statement::Return(Box::new(Expression::Binary {
+                    lhs: Box::new(Expression::Ref { id: "a", index: 0 }),
+                    op: crate::syntax::Operator::Plus,
+                    rhs: Box::new(Expression::Ref { id: "b", index: 1 }),
+                }))],
+            },
+        }));
 
         assert_eq!(expr, expected);
     }

@@ -108,7 +108,7 @@ impl<'src> Interpreter<'src> {
                 }
             }
             Statement::FnCall(expr) => {
-                if let Expression::FnCall {
+                if let Expression::Call {
                     id,
                     index: _,
                     ref params,
@@ -218,7 +218,7 @@ impl<'src> Interpreter<'src> {
                     "List index must evaluate to number".into(),
                 ))
             }
-            Expression::FnCall {
+            Expression::Call {
                 id,
                 index: _,
                 params,
@@ -256,16 +256,17 @@ impl<'src> Interpreter<'src> {
             FnType::ForeignFn { func } => Ok(func(args[0].clone())),
             FnType::NativeFn {
                 index: _,
+                ty: _,
                 params,
                 body,
             } => {
                 let statements = &body[..];
 
                 for i in 0..decl.arity as usize {
-                    let param = params[i];
+                    let param = &params[i];
                     let argument = args[i].clone();
 
-                    env.insert(param, argument);
+                    env.insert(param.id, argument);
                 }
 
                 for stmt in statements {

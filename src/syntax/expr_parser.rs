@@ -162,7 +162,7 @@ impl<'src> ExprParser<'src> for Parser<'src> {
             }
         }
         self.eat();
-        Ok(Box::new(Expression::FnCall {
+        Ok(Box::new(Expression::Call {
             id,
             index,
             params: args,

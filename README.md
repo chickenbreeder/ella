@@ -13,19 +13,18 @@ Commands:
 Options:
   -h, --help  Print help
 ```
-<sub>(Note: Compile only works for test/simple.ella right now)</sub>
 
 ## Goals
 
 * Create a language that can be compiled to WASM without any additional tooling
-* Build a LSP server on top of this (maybe)
+* Build a language server on top of this (maybe)
 
 ## Example
 
 Executing `cargo run -- compile test/add.ella -f wat` with
 
 ```rust
-fn add(a, b) {
+fn add(a: i32, b: i32): i32 {
     return a + b;
 }
 ```

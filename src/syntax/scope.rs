@@ -49,8 +49,4 @@ impl<'src> ScopeEnv<'src> {
             None => Err(ErrorKind::ParseError(format!("Undefined reference `{id}`"))),
         }
     }
-
-    pub fn locals(&self) -> &HashMap<&'src str, LocalIndex> {
-        &self.locals
-    }
 }

@@ -1,4 +1,4 @@
-fn foo() {
+fn foo(): i32 {
     let a = 4;
     let b = a;
     return b;

@@ -1,3 +1,5 @@
+use wasm_encoder::ValType;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Operator {
     Plus,
@@ -47,12 +49,30 @@ pub(crate) enum Keyword {
     False,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub(crate) enum Type {
+    Void,
+    I32,
+    I64,
+}
+
+impl Into<Option<ValType>> for Type {
+    fn into(self) -> Option<ValType> {
+        match self {
+            Self::Void => None,
+            Self::I32 => Some(ValType::I32),
+            Self::I64 => Some(ValType::I64),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Token<'src> {
     Invalid(char),
     Number(i64),
     Op(Operator),
     Kw(Keyword),
+    Ty(Type),
     Id(&'src str),
 
     LParen,
@@ -66,4 +86,5 @@ pub(crate) enum Token<'src> {
 
     Comma,
     Semicolon,
+    Colon,
 }

@@ -1,6 +1,6 @@
 use std::{iter::Peekable, str::CharIndices};
 
-use super::token::{Keyword, Operator, Token};
+use super::token::{Keyword, Operator, Token, Type};
 
 pub(crate) struct Lexer<'src> {
     src: &'src str,
@@ -27,6 +27,7 @@ impl<'src> Iterator for Lexer<'src> {
             Some((_, '=')) => Some(Token::Eq),
             Some((_, ',')) => Some(Token::Comma),
             Some((_, ';')) => Some(Token::Semicolon),
+            Some((_, ':')) => Some(Token::Colon),
             Some((off, c)) => {
                 if c.is_whitespace() {
                     return self.next();
@@ -88,6 +89,9 @@ impl<'src> Lexer<'src> {
             "return" => Token::Kw(Keyword::Return),
             "true" => Token::Kw(Keyword::True),
             "false" => Token::Kw(Keyword::False),
+            "i32" => Token::Ty(Type::I32),
+            "i64" => Token::Ty(Type::I64),
+            "void" => Token::Ty(Type::Void),
             _ => Token::Id(s),
         }
     }

@@ -17,15 +17,6 @@ impl<'src> Environment<'src> {
         }
     }
 
-    pub fn from(other: Environment<'src>) -> Self {
-        let entries = other.entries;
-
-        Self {
-            entries,
-            ret_val: None,
-        }
-    }
-
     pub fn get(&self, k: &'src str) -> Option<&Value> {
         self.entries.get(k)
     }
