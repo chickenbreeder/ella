@@ -1,6 +1,6 @@
 use wasm_encoder::{
-    CodeSection, ExportKind, ExportSection, Function, FunctionSection, Instruction, Module,
-    TypeSection, ValType,
+    BlockType, CodeSection, ExportKind, ExportSection, Function, FunctionSection, Instruction,
+    Module, TypeSection, ValType,
 };
 
 use crate::{
@@ -127,7 +127,11 @@ impl<'src> Compiler<'src> {
                 Self::compile_expr(expr, instructions);
                 // ? instructions.push(Instruction::Return);
             }
-            other => unimplemented!("{other:?}"),
+            Statement::If(expr, _) => {
+                Self::compile_expr(expr, instructions);
+                log::warn!("The generated code for if statements is not complete yet");
+            }
+            other => unimplemented!("Statement `{other:?}` is currently not supported"),
         }
     }
 

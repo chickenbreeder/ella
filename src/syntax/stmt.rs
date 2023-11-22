@@ -29,6 +29,12 @@ pub(crate) struct TypedId<'src> {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub(crate) struct Scope<'src> {
+    pub env: ScopeEnv<'src>,
+    pub statements: Vec<Statement<'src>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum Statement<'src> {
     LetDecl {
         id: &'src str,
@@ -41,7 +47,8 @@ pub(crate) enum Statement<'src> {
         value: Box<Expression<'src>>,
     },
     Return(Box<Expression<'src>>),
-    Block(ScopeEnv<'src>, Vec<Statement<'src>>),
+    Scope(Scope<'src>),
     FnDecl(FnDecl<'src>),
     FnCall(Box<Expression<'src>>),
+    If(Box<Expression<'src>>, Scope<'src>),
 }

@@ -129,10 +129,10 @@ impl<'src> Interpreter<'src> {
                     env.set_ret_val(v);
                 }
             }
-            Statement::Block(_, stmts) => {
+            Statement::Scope(scope) => {
                 let mut env = Environment::new();
 
-                for s in stmts.iter() {
+                for s in &scope.statements {
                     self.eval_stmt_in_env(s, &mut env)?;
                 }
             }

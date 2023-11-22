@@ -1,6 +1,13 @@
-fn main() {
+fn foo(): i32 {
+    return 42;
+}
+
+fn bar(): i32 {
     let a = foo();
 
-    let b = print(a);
-    print(bar());
+    if a < 20 {
+        return 42;
+    }
+
+    return a;
 }

@@ -9,7 +9,12 @@ use crate::{
 };
 use std::{collections::HashMap, iter::Peekable};
 
-use super::{scope::ScopeEnv, stmt::TypedId, token::Type, FunctionIndex, LocalIndex};
+use super::{
+    scope::ScopeEnv,
+    stmt::{Scope, TypedId},
+    token::Type,
+    FunctionIndex, LocalIndex, Operator,
+};
 
 pub(crate) struct Parser<'src> {
     pub(super) lexer: Peekable<Lexer<'src>>,
@@ -44,28 +49,22 @@ impl<'src> Parser<'src> {
                 let ty = self.parse_ty()?;
                 let env = ScopeEnv::with_locals(locals);
 
-                match *self.parse_scope(Some(env))? {
-                    Statement::Block(_, statements) => {
-                        let index = self.fn_index;
-                        self.fn_index += 1;
+                let scope = self.parse_scope(Some(env))?;
+                let index = self.fn_index;
+                self.fn_index += 1;
 
-                        self.functions.insert(id, index);
+                self.functions.insert(id, index);
 
-                        Ok(Some(Box::new(Statement::FnDecl(FnDecl {
-                            id,
-                            arity: params.len() as u8,
-                            ty: FnType::NativeFn {
-                                index,
-                                ty,
-                                params,
-                                body: statements,
-                            },
-                        }))))
-                    }
-                    other => Err(ErrorKind::ParseError(format!(
-                        "Expected a block statement, found {other:?}"
-                    ))),
-                }
+                Ok(Some(Box::new(Statement::FnDecl(FnDecl {
+                    id,
+                    arity: params.len() as u8,
+                    ty: FnType::NativeFn {
+                        index,
+                        ty,
+                        params,
+                        body: scope.statements,
+                    },
+                }))))
             }
             other => Err(ErrorKind::ParseError(format!(
                 "Expected top-level statement, found {other:?}"
@@ -101,6 +100,11 @@ impl<'src> Parser<'src> {
 
                         Ok(Some(Box::new(Statement::Return(expr))))
                     }
+                    Keyword::If => {
+                        let expr = self.parse_bool_expr(env)?;
+                        let scope = self.parse_scope(Some(env.clone()))?;
+                        Ok(Some(Box::new(Statement::If(expr, scope))))
+                    }
                     other => Err(ErrorKind::ParseError(format!(
                         "Expected statement, found {other:?}"
                     ))),
@@ -130,8 +134,8 @@ impl<'src> Parser<'src> {
                 })))
             }
             Some(Token::LCurly) => {
-                let stmt = self.parse_scope(None)?;
-                Ok(Some(stmt))
+                let scope = self.parse_scope(None)?;
+                Ok(Some(Box::new(Statement::Scope(scope))))
             }
             other => Err(ErrorKind::ParseError(format!(
                 "Expected statement, found {other:?}"
@@ -183,10 +187,7 @@ impl<'src> Parser<'src> {
         Ok(params)
     }
 
-    fn parse_scope(
-        &mut self,
-        parent_scope: Option<ScopeEnv<'src>>,
-    ) -> PResult<Box<Statement<'src>>> {
+    fn parse_scope(&mut self, parent_scope: Option<ScopeEnv<'src>>) -> PResult<Scope<'src>> {
         let mut statements = vec![];
         let mut env = if let Some(parent_scope) = parent_scope {
             parent_scope
@@ -213,7 +214,7 @@ impl<'src> Parser<'src> {
             statements.push(*stmt);
         }
 
-        Ok(Box::new(Statement::Block(env, statements)))
+        Ok(Scope { env, statements })
     }
 
     pub(super) fn parse_rep<T, F>(&mut self, mut producer: F) -> PResult<Vec<T>>
@@ -283,6 +284,23 @@ impl<'src> Parser<'src> {
             None => Err(ErrorKind::ParseError(
                 "Expected expression, found EOF".into(),
             )),
+        }
+    }
+
+    fn parse_bool_expr(&mut self, env: &mut ScopeEnv<'src>) -> PResult<Box<Expression<'src>>> {
+        match self.parse_expr(env)? {
+            Some(expr) => match *expr {
+                Expression::Binary { lhs: _, op, rhs: _ } => match op {
+                    Operator::Gt | Operator::Lt => Ok(expr),
+                    other => Err(ErrorKind::ParseError(format!(
+                        "Expected logical operator, found {other:?}"
+                    ))),
+                },
+                other => Err(ErrorKind::ParseError(format!(
+                    "Expected boolean expression, found {other:?}"
+                ))),
+            },
+            None => panic!(""),
         }
     }
 }
