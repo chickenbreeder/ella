@@ -7,7 +7,7 @@ use crate::{
         ExprParser, Expression,
     },
 };
-use std::{collections::HashMap, iter::Peekable};
+use std::{borrow::Cow, collections::HashMap, iter::Peekable};
 
 use super::{
     scope::ScopeEnv,
@@ -47,9 +47,9 @@ impl<'src> Parser<'src> {
                     .collect();
 
                 let ty = self.parse_ty()?;
-                let env = ScopeEnv::with_locals(locals);
+                let mut env = ScopeEnv::with_locals(locals);
 
-                let scope = self.parse_scope(Some(env))?;
+                let scope = self.parse_scope(&mut env)?;
                 let index = self.fn_index;
                 self.fn_index += 1;
 
@@ -102,7 +102,7 @@ impl<'src> Parser<'src> {
                     }
                     Keyword::If => {
                         let expr = self.parse_bool_expr(env)?;
-                        let scope = self.parse_scope(Some(env.clone()))?;
+                        let scope = self.parse_scope(env)?;
                         Ok(Some(Box::new(Statement::If(expr, scope))))
                     }
                     other => Err(ErrorKind::ParseError(format!(
@@ -134,7 +134,7 @@ impl<'src> Parser<'src> {
                 })))
             }
             Some(Token::LCurly) => {
-                let scope = self.parse_scope(None)?;
+                let scope = self.parse_scope(env)?;
                 Ok(Some(Box::new(Statement::Scope(scope))))
             }
             other => Err(ErrorKind::ParseError(format!(
@@ -187,13 +187,10 @@ impl<'src> Parser<'src> {
         Ok(params)
     }
 
-    fn parse_scope(&mut self, parent_scope: Option<ScopeEnv<'src>>) -> PResult<Scope<'src>> {
+    fn parse_scope(&mut self, parent_scope: &mut ScopeEnv<'src>) -> PResult<Scope<'src>> {
+        log::debug!("parse_scope: {parent_scope:?}");
         let mut statements = vec![];
-        let mut env = if let Some(parent_scope) = parent_scope {
-            parent_scope
-        } else {
-            ScopeEnv::new()
-        };
+        let mut env = parent_scope.clone();
 
         self.expect(Token::LCurly)?;
 

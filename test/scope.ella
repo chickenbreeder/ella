@@ -3,6 +3,5 @@ fn main(): void {
 
     {
         let b = a + 2;
-        print(b);
     }
 }
