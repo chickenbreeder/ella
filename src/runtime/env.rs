@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use super::value::Value;
 
-// TODO: Needs refactoring. An Environment should really just be an alias for a HashMap.
 // This `ret_val` thing is a really ugly hack.
 pub(crate) struct Environment<'src> {
     entries: HashMap<&'src str, Value>,
